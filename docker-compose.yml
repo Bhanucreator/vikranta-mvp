@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: vikranta_db
+    environment:
+      POSTGRES_USER: vikranta_user
+      POSTGRES_PASSWORD: vikranta_pass
+      POSTGRES_DB: vikranta_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - vikranta_network
+ 
+  backend:
+    build: ./backend
+    container_name: vikranta_backend
+    environment:
+      DATABASE_URL: postgresql://vikranta_user:vikranta_pass@db:5432/vikranta_db
+      JWT_SECRET_KEY: your-secret-key-change-in-production
+      FLASK_ENV: development
+      SMTP_SERVER: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USERNAME: your-email@gmail.com
+      SMTP_PASSWORD: your-app-password
+      FRONTEND_URL: http://localhost:3000
+      BACKEND_URL: http://localhost:5000
+      GEMINI_API_KEY: your-gemini-api-key
+      OPENWEATHER_API_KEY: your-openweather-api-key
+      TWILIO_ACCOUNT_SID: your-twilio-account-sid
+      TWILIO_AUTH_TOKEN: your-twilio-auth-token
+      TWILIO_PHONE_NUMBER: your-twilio-phone-number
+      SMS_ENABLED: "true"
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+    networks:
+      - vikranta_network
+    command: python app.py
+
+  frontend:
+    build: ./frontend
+    container_name: vikranta_frontend
+    environment:
+      VITE_API_URL: http://localhost:5000/api
+      VITE_MAPBOX_TOKEN: your-mapbox-token
+      VITE_GEMINI_API_KEY: your-gemini-api-key
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - vikranta_network
+    command: npm run dev -- --host
+
+networks:
+  vikranta_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
