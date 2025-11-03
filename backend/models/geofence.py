@@ -1,8 +1,12 @@
 from extensions import db
 from datetime import datetime
-from geoalchemy2 import Geometry
-from geoalchemy2.shape import to_shape
-from shapely.geometry import mapping
+try:
+    from geoalchemy2 import Geometry
+    from geoalchemy2.shape import to_shape
+    from shapely.geometry import mapping
+    POSTGIS_AVAILABLE = True
+except ImportError:
+    POSTGIS_AVAILABLE = False
 
 class Geofence(db.Model):
     """Geofence/Zone model"""
@@ -13,8 +17,8 @@ class Geofence(db.Model):
     zone_type = db.Column(db.String(50), nullable=False)  # restricted, high_crime, cultural, safe_zone
     risk_level = db.Column(db.String(20), default='medium')  # low, medium, high
     
-    # Polygon geometry (PostGIS)
-    polygon = db.Column(Geometry('POLYGON', srid=4326), nullable=False)
+    # Simplified polygon storage (JSON text for now)
+    polygon_data = db.Column(db.Text)  # Store GeoJSON as text
     
     # Details
     description = db.Column(db.Text)
@@ -28,10 +32,13 @@ class Geofence(db.Model):
     
     def to_dict(self):
         """Convert geofence to dictionary"""
+        import json
         polygon_data = None
-        if self.polygon:
-            shape = to_shape(self.polygon)
-            polygon_data = mapping(shape)
+        if self.polygon_data:
+            try:
+                polygon_data = json.loads(self.polygon_data)
+            except:
+                pass
         
         return {
             'id': self.id,

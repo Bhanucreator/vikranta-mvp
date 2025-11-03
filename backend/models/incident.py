@@ -1,8 +1,12 @@
 from extensions import db
 from datetime import datetime
-from geoalchemy2 import Geometry
-from geoalchemy2.shape import to_shape
-from shapely.geometry import mapping
+try:
+    from geoalchemy2 import Geometry
+    from geoalchemy2.shape import to_shape
+    from shapely.geometry import mapping
+    POSTGIS_AVAILABLE = True
+except ImportError:
+    POSTGIS_AVAILABLE = False
 
 class Incident(db.Model):
     """Incident/Emergency model"""
@@ -16,8 +20,9 @@ class Incident(db.Model):
     status = db.Column(db.String(20), default='active')  # active, acknowledged, resolved, false_alarm
     priority = db.Column(db.String(20), default='high')  # low, medium, high, critical
     
-    # Location (PostGIS Point)
-    location = db.Column(Geometry('POINT', srid=4326))
+    # Location - Use fallback if PostGIS not available
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
     address = db.Column(db.String(255))
     
     # Details
@@ -33,11 +38,10 @@ class Incident(db.Model):
     def to_dict(self):
         """Convert incident to dictionary"""
         location_data = None
-        if self.location:
-            point = to_shape(self.location)
+        if self.latitude is not None and self.longitude is not None:
             location_data = {
-                'latitude': point.y,
-                'longitude': point.x
+                'latitude': self.latitude,
+                'longitude': self.longitude
             }
         
         return {
