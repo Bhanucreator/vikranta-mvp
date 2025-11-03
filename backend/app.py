@@ -192,8 +192,7 @@ def initialize_sample_data():
     """Initialize sample geofences and test users"""
     from models.geofence import Geofence
     from models.user import User
-    from geoalchemy2.shape import from_shape
-    from shapely.geometry import Polygon
+    import json
     
     # Check if sample data already exists
     if Geofence.query.first() is None:
@@ -203,43 +202,44 @@ def initialize_sample_data():
                 'name': 'Jaipur Old City - High Tourist Zone',
                 'zone_type': 'tourist_area',
                 'risk_level': 'medium',
-                'coordinates': [[75.823, 26.919], [75.827, 26.919], [75.827, 26.923], [75.823, 26.923]],
+                'coordinates': [[75.823, 26.919], [75.827, 26.919], [75.827, 26.923], [75.823, 26.923], [75.823, 26.919]],
                 'description': 'Popular tourist area with high pickpocket reports'
             },
             {
                 'name': 'Delhi Restricted Zone',
                 'zone_type': 'restricted',
                 'risk_level': 'high',
-                'coordinates': [[77.200, 28.610], [77.205, 28.610], [77.205, 28.615], [77.200, 28.615]],
+                'coordinates': [[77.200, 28.610], [77.205, 28.610], [77.205, 28.615], [77.200, 28.615], [77.200, 28.610]],
                 'description': 'Government restricted area'
             },
             {
                 'name': 'Mumbai Gateway Safe Zone',
                 'zone_type': 'safe_zone',
                 'risk_level': 'low',
-                'coordinates': [[72.834, 18.921], [72.836, 18.921], [72.836, 18.923], [72.834, 18.923]],
+                'coordinates': [[72.834, 18.921], [72.836, 18.921], [72.836, 18.923], [72.834, 18.923], [72.834, 18.921]],
                 'description': 'Well-monitored tourist area with police presence'
             }
         ]
         
         for gf_data in sample_geofences:
-            coords = gf_data['coordinates']
-            # Close the polygon
-            coords.append(coords[0])
-            polygon = Polygon(coords)
+            # Store polygon as GeoJSON text
+            polygon_geojson = {
+                'type': 'Polygon',
+                'coordinates': [gf_data['coordinates']]
+            }
             
             geofence = Geofence(
                 name=gf_data['name'],
                 zone_type=gf_data['zone_type'],
                 risk_level=gf_data['risk_level'],
-                polygon=from_shape(polygon, srid=4326),
+                polygon_data=json.dumps(polygon_geojson),
                 description=gf_data['description'],
                 active=True
             )
             db.session.add(geofence)
         
         db.session.commit()
-        print("Sample geofences created!")
+        print("✅ Sample geofences created!")
     
     # Create main authority account if it doesn't exist
     if User.query.filter_by(email='admin@vikranta.gov.in').first() is None:
