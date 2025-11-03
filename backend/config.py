@@ -7,8 +7,14 @@ load_dotenv()
 class Config:
     """Base configuration"""
     SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'dev-secret-key'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+    
+    # Fix Railway's DATABASE_URL format (postgres:// -> postgresql://)
+    database_url = os.environ.get('DATABASE_URL') or \
         'postgresql://vikranta_user:vikranta_pass@localhost:5432/vikranta_db'
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    SQLALCHEMY_DATABASE_URI = database_url
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # JWT Configuration
