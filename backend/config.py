@@ -25,11 +25,14 @@ class Config:
     MAIL_SERVER = os.environ.get('SMTP_SERVER') or 'smtp.gmail.com'
     MAIL_PORT = int(os.environ.get('SMTP_PORT') or 587)
     MAIL_USE_TLS = True
+    MAIL_USE_SSL = False
     MAIL_USERNAME = os.environ.get('SMTP_USERNAME')
     MAIL_PASSWORD = os.environ.get('SMTP_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('SMTP_USERNAME')
     MAIL_MAX_EMAILS = None
     MAIL_ASCII_ATTACHMENTS = False
+    MAIL_SUPPRESS_SEND = False  # Ensure emails are actually sent
+    MAIL_DEBUG = True  # Enable debug output
     
     # Twilio SMS Configuration
     TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')

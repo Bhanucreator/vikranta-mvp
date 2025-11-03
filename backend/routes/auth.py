@@ -272,3 +272,32 @@ def add_authority():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@auth_bp.route('/test-email', methods=['POST'])
+def test_email():
+    """Test email configuration (development only)"""
+    try:
+        data = request.get_json()
+        test_email = data.get('email', 'test@example.com')
+        
+        from flask import current_app
+        print("📧 Testing email configuration...")
+        print(f"   SMTP Server: {current_app.config.get('MAIL_SERVER')}")
+        print(f"   SMTP Port: {current_app.config.get('MAIL_PORT')}")
+        print(f"   SMTP Username: {current_app.config.get('MAIL_USERNAME')}")
+        print(f"   SMTP Password set: {bool(current_app.config.get('MAIL_PASSWORD'))}")
+        
+        result = send_otp_email(test_email, "123456", "Test User")
+        
+        return jsonify({
+            'success': result,
+            'message': 'Email sent successfully' if result else 'Email sending failed',
+            'config': {
+                'server': current_app.config.get('MAIL_SERVER'),
+                'port': current_app.config.get('MAIL_PORT'),
+                'username': current_app.config.get('MAIL_USERNAME'),
+                'password_set': bool(current_app.config.get('MAIL_PASSWORD'))
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

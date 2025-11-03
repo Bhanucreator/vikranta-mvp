@@ -28,6 +28,14 @@ def get_twilio_client():
 def send_email(to_email, subject, body, html=None):
     """Send email notification"""
     try:
+        # Debug: Print SMTP configuration (without password)
+        print(f"📧 SMTP Config:")
+        print(f"   Server: {current_app.config.get('MAIL_SERVER')}")
+        print(f"   Port: {current_app.config.get('MAIL_PORT')}")
+        print(f"   Username: {current_app.config.get('MAIL_USERNAME')}")
+        print(f"   TLS: {current_app.config.get('MAIL_USE_TLS')}")
+        print(f"   To: {to_email}")
+        
         msg = Message(
             subject=subject,
             sender=('VIKRANTA Safety', current_app.config['MAIL_USERNAME']),
@@ -35,12 +43,27 @@ def send_email(to_email, subject, body, html=None):
             body=body,
             html=html
         )
+        
+        print(f"📧 Attempting to send email to {to_email}...")
         mail.send(msg)
         logger.info(f"✅ Email sent successfully to {to_email}")
+        print(f"✅ Email sent successfully to {to_email}")
         return True
     except Exception as e:
-        logger.error(f"❌ Failed to send email to {to_email}: {str(e)}")
-        print(f"❌ Email Error: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"❌ Failed to send email to {to_email}: {error_msg}")
+        print(f"❌ Email Error to {to_email}: {error_msg}")
+        
+        # Provide helpful error messages
+        if "authentication failed" in error_msg.lower():
+            print("⚠️  SMTP Authentication failed - Check SMTP_USERNAME and SMTP_PASSWORD")
+            print("   Make sure you're using a Gmail App Password (not your regular password)")
+        elif "connection" in error_msg.lower() or "timeout" in error_msg.lower():
+            print("⚠️  SMTP Connection failed - Check SMTP_SERVER and SMTP_PORT")
+            print("   Gmail: smtp.gmail.com:587")
+        elif "tls" in error_msg.lower() or "ssl" in error_msg.lower():
+            print("⚠️  TLS/SSL Error - Make sure MAIL_USE_TLS=True")
+        
         return False
 
 def send_sms(phone_number, message):
