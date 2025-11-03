@@ -55,24 +55,42 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # Send OTP via email
+        # Try to send OTP via email (don't block if it fails)
         email_sent = False
         try:
-            email_sent = send_otp_email(email, otp, data['name'])
+            # Use timeout to prevent blocking
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError
+            import time
+            
+            def send_email_task():
+                return send_otp_email(email, otp, data['name'])
+            
+            # Try to send email with 3 second timeout
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(send_email_task)
+                try:
+                    email_sent = future.result(timeout=3.0)
+                except TimeoutError:
+                    print(f"⚠️ Email sending timed out for {email}")
+                    email_sent = False
+                    
             if email_sent:
                 print(f"✅ OTP email sent successfully to {email}")
             else:
-                print(f"⚠️  Email sending failed for {email}")
+                print(f"⚠️ Email sending failed for {email}")
         except Exception as email_error:
             print(f"❌ Email error: {str(email_error)}")
+            email_sent = False
         
-        # Log OTP to console for development (remove in production)
+        # Always log OTP to console for development
         print(f"🔐 OTP for {email}: {otp}")
+        print(f"📧 Email sent status: {email_sent}")
         
         return jsonify({
-            'message': 'Registration successful. Please check your email for OTP.',
+            'message': 'Registration successful. Please check your email for OTP.' if email_sent else 'Registration successful. Check backend logs for OTP.',
             'user_id': user.id,
-            'email_sent': email_sent
+            'email_sent': email_sent,
+            'otp_hint': f'Check Railway logs or console for OTP: {otp[:2]}****'  # Show first 2 digits as hint
         }), 201
         
     except Exception as e:

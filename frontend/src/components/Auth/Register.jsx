@@ -24,14 +24,23 @@ export default function Register() {
     try {
       const response = await authService.register(formData)
       setEmailSent(response.email_sent || false)
+      
       if (response.email_sent) {
         toast.success('Registration successful! OTP sent to your email')
       } else {
-        toast.warning('Registration successful! Email failed - check backend logs for OTP')
+        toast.warning('Registration successful! Email failed - check console for OTP')
+        // Show OTP hint in console if available
+        if (response.otp_hint) {
+          console.log('🔐 OTP Hint:', response.otp_hint)
+          toast.info(`OTP Hint: ${response.otp_hint}`)
+        }
       }
+      
       setShowOtpField(true)
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Registration failed')
+      const errorMsg = error.response?.data?.error || error.message || 'Registration failed'
+      toast.error(errorMsg)
+      console.error('Registration error:', error.response?.data || error)
     } finally {
       setLoading(false)
     }
