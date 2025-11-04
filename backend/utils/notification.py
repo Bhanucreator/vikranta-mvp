@@ -26,38 +26,65 @@ def get_twilio_client():
     return _twilio_client
 
 def send_email(to_email, subject, body, html=None):
-    """Send email notification"""
+    """Send email notification using direct SMTP"""
     try:
         # Debug: Print SMTP configuration (without password)
         print(f"📧 SMTP Config:")
-        print(f"   Server: {current_app.config.get('MAIL_SERVER')}")
-        print(f"   Port: {current_app.config.get('MAIL_PORT')}")
-        print(f"   Username: {current_app.config.get('MAIL_USERNAME')}")
-        print(f"   Password set: {bool(current_app.config.get('MAIL_PASSWORD'))}")
-        print(f"   TLS: {current_app.config.get('MAIL_USE_TLS')}")
+        smtp_server = current_app.config.get('MAIL_SERVER')
+        smtp_port = current_app.config.get('MAIL_PORT')
+        smtp_username = current_app.config.get('MAIL_USERNAME')
+        smtp_password = current_app.config.get('MAIL_PASSWORD')
+        
+        print(f"   Server: {smtp_server}")
+        print(f"   Port: {smtp_port}")
+        print(f"   Username: {smtp_username}")
+        print(f"   Password set: {bool(smtp_password)}")
         print(f"   To: {to_email}")
         
         # Verify SMTP credentials are set
-        if not current_app.config.get('MAIL_USERNAME'):
+        if not smtp_username:
             raise Exception("SMTP_USERNAME not configured")
-        if not current_app.config.get('MAIL_PASSWORD'):
+        if not smtp_password:
             raise Exception("SMTP_PASSWORD not configured")
-        
-        msg = Message(
-            subject=subject,
-            sender=('VIKRANTA Safety', current_app.config['MAIL_USERNAME']),
-            recipients=[to_email],
-            body=body,
-            html=html
-        )
         
         print(f"📧 Attempting to send email to {to_email}...")
         
-        # Add timeout to prevent hanging
+        # Use direct SMTP instead of Flask-Mail (more reliable)
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
         import socket
-        socket.setdefaulttimeout(10)  # 10 second timeout
         
-        mail.send(msg)
+        # Set timeout
+        socket.setdefaulttimeout(15)
+        
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = f'VIKRANTA Safety <{smtp_username}>'
+        msg['To'] = to_email
+        
+        # Attach both plain text and HTML
+        part1 = MIMEText(body, 'plain')
+        msg.attach(part1)
+        
+        if html:
+            part2 = MIMEText(html, 'html')
+            msg.attach(part2)
+        
+        # Connect and send
+        print(f"� Connecting to {smtp_server}:{smtp_port}...")
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=15)
+        
+        print(f"🔒 Starting TLS...")
+        server.starttls()
+        
+        print(f"🔐 Logging in as {smtp_username}...")
+        server.login(smtp_username, smtp_password)
+        
+        print(f"📤 Sending message...")
+        server.send_message(msg)
+        server.quit()
         
         logger.info(f"✅ Email sent successfully to {to_email}")
         print(f"✅ Email sent successfully to {to_email}")
@@ -78,7 +105,7 @@ def send_email(to_email, subject, body, html=None):
         if "authentication failed" in error_msg.lower() or "username and password not accepted" in error_msg.lower():
             print("⚠️  SMTP Authentication failed - Check SMTP_USERNAME and SMTP_PASSWORD")
             print("   Make sure you're using a Gmail App Password (not your regular password)")
-        elif "connection" in error_msg.lower() or "timeout" in error_msg.lower():
+        elif "connection" in error_msg.lower():
             print("⚠️  SMTP Connection failed - Check SMTP_SERVER and SMTP_PORT")
             print("   Gmail: smtp.gmail.com:587")
         elif "tls" in error_msg.lower() or "ssl" in error_msg.lower():
