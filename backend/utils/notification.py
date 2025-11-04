@@ -65,7 +65,8 @@ def send_email(to_email, subject, body, html=None):
         # Create message
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = f'VIKRANTA Safety <{smtp_username}>'
+        # Use tech.pheonix03@gmail.com as sender (must be verified in SendGrid)
+        msg['From'] = f'VIKRANTA Safety <tech.pheonix03@gmail.com>'
         msg['To'] = to_email
         
         # Attach both plain text and HTML
