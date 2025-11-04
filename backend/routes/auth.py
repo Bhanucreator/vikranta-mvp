@@ -55,43 +55,39 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # Try to send OTP via email (don't block if it fails)
-        email_sent = False
+        # Send OTP via email - REQUIRED (not optional)
+        print(f"📧 Sending OTP email to {email}...")
+        
         try:
-            # Use timeout to prevent blocking
-            from concurrent.futures import ThreadPoolExecutor, TimeoutError
-            import time
+            email_sent = send_otp_email(email, otp, data['name'])
             
-            def send_email_task():
-                return send_otp_email(email, otp, data['name'])
+            if not email_sent:
+                # If email fails, rollback registration and return error
+                db.session.delete(user)
+                db.session.commit()
+                return jsonify({
+                    'error': 'Failed to send verification email. Please check your email address and try again.',
+                    'details': 'Email delivery failed. Contact support if this persists.'
+                }), 500
             
-            # Try to send email with 3 second timeout
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(send_email_task)
-                try:
-                    email_sent = future.result(timeout=3.0)
-                except TimeoutError:
-                    print(f"⚠️ Email sending timed out for {email}")
-                    email_sent = False
-                    
-            if email_sent:
-                print(f"✅ OTP email sent successfully to {email}")
-            else:
-                print(f"⚠️ Email sending failed for {email}")
+            print(f"✅ OTP email sent successfully to {email}")
+            
+            return jsonify({
+                'message': 'Registration successful! Please check your email for the verification code.',
+                'user_id': user.id,
+                'email_sent': True
+            }), 201
+            
         except Exception as email_error:
+            # If email sending throws exception, rollback registration
             print(f"❌ Email error: {str(email_error)}")
-            email_sent = False
-        
-        # Always log OTP to console for development
-        print(f"🔐 OTP for {email}: {otp}")
-        print(f"📧 Email sent status: {email_sent}")
-        
-        return jsonify({
-            'message': 'Registration successful. Please check your email for OTP.' if email_sent else 'Registration successful. Check backend logs for OTP.',
-            'user_id': user.id,
-            'email_sent': email_sent,
-            'otp_hint': f'Check Railway logs or console for OTP: {otp[:2]}****'  # Show first 2 digits as hint
-        }), 201
+            db.session.delete(user)
+            db.session.commit()
+            
+            return jsonify({
+                'error': 'Failed to send verification email. Please try again.',
+                'details': str(email_error)
+            }), 500
         
     except Exception as e:
         db.session.rollback()

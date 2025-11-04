@@ -23,24 +23,22 @@ export default function Register() {
     setLoading(true)
     try {
       const response = await authService.register(formData)
-      setEmailSent(response.email_sent || false)
-      
-      if (response.email_sent) {
-        toast.success('Registration successful! OTP sent to your email')
-      } else {
-        toast.warning('Registration successful! Email failed - check console for OTP')
-        // Show OTP hint in console if available
-        if (response.otp_hint) {
-          console.log('🔐 OTP Hint:', response.otp_hint)
-          toast.info(`OTP Hint: ${response.otp_hint}`)
-        }
-      }
-      
+      setEmailSent(true)
+      toast.success('Registration successful! OTP sent to your email')
       setShowOtpField(true)
     } catch (error) {
       const errorMsg = error.response?.data?.error || error.message || 'Registration failed'
-      toast.error(errorMsg)
-      console.error('Registration error:', error.response?.data || error)
+      const errorDetails = error.response?.data?.details
+      
+      if (errorMsg.includes('email')) {
+        toast.error('Failed to send verification email. Please check your email address.')
+      } else {
+        toast.error(errorMsg)
+      }
+      
+      if (errorDetails) {
+        console.error('Error details:', errorDetails)
+      }
     } finally {
       setLoading(false)
     }
@@ -89,29 +87,18 @@ export default function Register() {
             </button>
           </form>
 
-          <div className={`mt-6 p-4 rounded-lg border-2 ${emailSent ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
-            {emailSent ? (
-              <div className="text-center">
-                <p className="text-sm text-green-800 font-medium mb-2">
-                  ✅ OTP sent to your email successfully!
-                </p>
-                <p className="text-xs text-green-700">
-                  Check your inbox (and spam folder) for the verification code.
-                </p>
-              </div>
-            ) : (
-              <div className="text-center">
-                <p className="text-sm text-yellow-800 font-medium mb-2">
-                  ⚠️ Email sending failed
-                </p>
-                <p className="text-xs text-yellow-700 mb-2">
-                  Check backend logs for OTP:
-                </p>
-                <code className="block text-xs bg-yellow-100 p-2 rounded">
-                  docker-compose logs backend | grep OTP
-                </code>
-              </div>
-            )}
+          <div className="mt-6 p-4 rounded-lg border-2 bg-blue-50 border-blue-200">
+            <div className="text-center">
+              <p className="text-sm text-blue-800 font-medium mb-2">
+                ✅ Verification email sent!
+              </p>
+              <p className="text-xs text-blue-700">
+                Check your inbox and spam folder for the 6-digit code.
+              </p>
+              <p className="text-xs text-blue-600 mt-2">
+                Didn't receive it? <button onClick={() => window.location.reload()} className="underline font-semibold">Try again</button>
+              </p>
+            </div>
           </div>
         </div>
       </div>
