@@ -33,8 +33,15 @@ def send_email(to_email, subject, body, html=None):
         print(f"   Server: {current_app.config.get('MAIL_SERVER')}")
         print(f"   Port: {current_app.config.get('MAIL_PORT')}")
         print(f"   Username: {current_app.config.get('MAIL_USERNAME')}")
+        print(f"   Password set: {bool(current_app.config.get('MAIL_PASSWORD'))}")
         print(f"   TLS: {current_app.config.get('MAIL_USE_TLS')}")
         print(f"   To: {to_email}")
+        
+        # Verify SMTP credentials are set
+        if not current_app.config.get('MAIL_USERNAME'):
+            raise Exception("SMTP_USERNAME not configured")
+        if not current_app.config.get('MAIL_PASSWORD'):
+            raise Exception("SMTP_PASSWORD not configured")
         
         msg = Message(
             subject=subject,
@@ -45,17 +52,30 @@ def send_email(to_email, subject, body, html=None):
         )
         
         print(f"📧 Attempting to send email to {to_email}...")
+        
+        # Add timeout to prevent hanging
+        import socket
+        socket.setdefaulttimeout(10)  # 10 second timeout
+        
         mail.send(msg)
+        
         logger.info(f"✅ Email sent successfully to {to_email}")
         print(f"✅ Email sent successfully to {to_email}")
         return True
+        
+    except socket.timeout:
+        error_msg = "SMTP connection timeout - server took too long to respond"
+        logger.error(f"❌ Timeout sending email to {to_email}")
+        print(f"❌ Email Timeout: {error_msg}")
+        return False
+        
     except Exception as e:
         error_msg = str(e)
         logger.error(f"❌ Failed to send email to {to_email}: {error_msg}")
         print(f"❌ Email Error to {to_email}: {error_msg}")
         
         # Provide helpful error messages
-        if "authentication failed" in error_msg.lower():
+        if "authentication failed" in error_msg.lower() or "username and password not accepted" in error_msg.lower():
             print("⚠️  SMTP Authentication failed - Check SMTP_USERNAME and SMTP_PASSWORD")
             print("   Make sure you're using a Gmail App Password (not your regular password)")
         elif "connection" in error_msg.lower() or "timeout" in error_msg.lower():
@@ -63,6 +83,10 @@ def send_email(to_email, subject, body, html=None):
             print("   Gmail: smtp.gmail.com:587")
         elif "tls" in error_msg.lower() or "ssl" in error_msg.lower():
             print("⚠️  TLS/SSL Error - Make sure MAIL_USE_TLS=True")
+        
+        # Print full traceback for debugging
+        import traceback
+        traceback.print_exc()
         
         return False
 
