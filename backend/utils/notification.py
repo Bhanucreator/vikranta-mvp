@@ -189,37 +189,82 @@ def send_sms(phone_number, message):
         return False
 
 def send_otp_email(to_email, otp, name):
-    """Send OTP via email"""
-    subject = "VIKRANTA - Your Verification Code"
-    body = f"""
-    Hi {name},
-    
-    Your VIKRANTA verification code is: {otp}
-    
-    This code will expire in 10 minutes.
-    
-    If you didn't request this code, please ignore this email.
-    
-    Best regards,
-    Team VIKRANTA
-    """
-    
-    html = f"""
-    <html>
-        <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2 style="color: #ff6b35;">VIKRANTA</h2>
-            <p>Hi {name},</p>
-            <p>Your verification code is:</p>
-            <h1 style="color: #ff6b35; font-size: 32px; letter-spacing: 5px;">{otp}</h1>
-            <p>This code will expire in 10 minutes.</p>
-            <p>If you didn't request this code, please ignore this email.</p>
-            <hr>
-            <p style="color: #666; font-size: 12px;">Team VIKRANTA - Smart Tourist Safety</p>
-        </body>
-    </html>
-    """
-    
-    return send_email(to_email, subject, body, html)
+    """Send OTP via email using SendGrid HTTP API (more reliable than SMTP on Railway)"""
+    try:
+        import os
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail, Email, To, Content
+        
+        print(f"\n📧 SendGrid Email Configuration:")
+        
+        # Get SendGrid API key (check both env var names)
+        api_key = os.environ.get('SENDGRID_API_KEY') or os.environ.get('SMTP_PASSWORD')
+        sender_email = os.environ.get('SENDGRID_FROM_EMAIL', 'kiranbhanu671@gmail.com')
+        
+        print(f"   API Key: {'*' * 20}...{api_key[-4:] if api_key else 'Not Set'}")
+        print(f"   From: {sender_email}")
+        print(f"   To: {to_email}")
+        print(f"   OTP: {otp}")
+        
+        if not api_key:
+            raise ValueError("Missing SendGrid API key. Set SENDGRID_API_KEY or SMTP_PASSWORD environment variable")
+        
+        # Email HTML content
+        html_content = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <h2 style="color: #2563eb; margin-bottom: 20px;">Welcome to Vikranta</h2>
+                    <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
+                        Hi {name},
+                    </p>
+                    <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
+                        Your verification code is:
+                    </p>
+                    <div style="background-color: #f0f9ff; padding: 20px; border-radius: 5px; text-align: center; margin-bottom: 20px;">
+                        <h1 style="color: #1e40af; margin: 0; font-size: 36px; letter-spacing: 5px;">{otp}</h1>
+                    </div>
+                    <p style="font-size: 14px; color: #666;">
+                        This OTP is valid for 10 minutes. Do not share it with anyone.
+                    </p>
+                    <p style="font-size: 14px; color: #666; margin-top: 20px;">
+                        If you didn't request this code, please ignore this email.
+                    </p>
+                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+                    <p style="font-size: 12px; color: #999;">
+                        Team VIKRANTA - Smart Tourist Safety Platform
+                    </p>
+                </div>
+            </body>
+        </html>
+        """
+        
+        # Create SendGrid message
+        message = Mail(
+            from_email=Email(sender_email, 'VIKRANTA Safety'),
+            to_emails=To(to_email),
+            subject='VIKRANTA - Your Verification Code',
+            html_content=Content("text/html", html_content)
+        )
+        
+        print(f"\n📡 Sending email via SendGrid HTTP API (port 443 - HTTPS)...")
+        
+        # Send email via SendGrid API (uses HTTPS port 443 instead of SMTP 587)
+        sg = SendGridAPIClient(api_key)
+        response = sg.send(message)
+        
+        print(f"✅ SendGrid Response Status: {response.status_code}")
+        print(f"✅ Email sent successfully to {to_email}")
+        
+        logger.info(f"✅ OTP email sent to {to_email} via SendGrid")
+        return True
+            
+    except Exception as e:
+        logger.error(f"❌ Failed to send OTP email via SendGrid: {str(e)}")
+        print(f"❌ Error sending email via SendGrid: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 def send_emergency_alert(incident, user):
     """Send emergency alert notifications"""
