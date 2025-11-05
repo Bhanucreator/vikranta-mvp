@@ -384,20 +384,51 @@ export default function UserDashboard() {
   
   // AI-based Safety Score calculation
   const calculateSafetyScore = () => {
-    if (!currentLocation) return;
+    if (!currentLocation) {
+      setSafetyScore(9.0); // Default score when no location
+      return;
+    }
     
-    // Simulated AI monitoring - would use TensorFlow/PyTorch in production
+    // Calculate safety score based on ACTUAL geofence data
+    let score = 10; // Start with perfect score
+    
+    // Factor 1: Time of day (6 AM - 8 PM is safer)
     const timeOfDay = new Date().getHours();
-    const isSafeTime = timeOfDay >= 6 && timeOfDay <= 20; // 6 AM to 8 PM
-    const crowdedArea = Math.random() > 0.3; // Simulated crowd detection
-    const alertsNearby = geofenceAlerts.length;
+    const isSafeTime = timeOfDay >= 6 && timeOfDay <= 20;
+    if (!isSafeTime) {
+      score -= 1.5; // Reduce score at night
+      console.log('🌙 Night time detected: -1.5 points');
+    }
     
-    let score = 10;
-    if (!isSafeTime) score -= 2;
-    if (!crowdedArea) score -= 1;
-    if (alertsNearby > 0) score -= alertsNearby * 1.5;
+    // Factor 2: Geofence alerts (most important factor)
+    const highRiskAlerts = geofenceAlerts.filter(alert => alert.risk === 'high');
+    const mediumRiskAlerts = geofenceAlerts.filter(alert => alert.risk === 'medium');
     
-    setSafetyScore(Math.max(0, Math.min(10, score)).toFixed(1));
+    if (highRiskAlerts.length > 0) {
+      score -= highRiskAlerts.length * 3; // -3 points per high-risk zone
+      console.log(`🚨 In ${highRiskAlerts.length} high-risk zone(s): -${highRiskAlerts.length * 3} points`);
+    }
+    
+    if (mediumRiskAlerts.length > 0) {
+      score -= mediumRiskAlerts.length * 1.5; // -1.5 points per caution zone
+      console.log(`⚠️ In ${mediumRiskAlerts.length} caution zone(s): -${mediumRiskAlerts.length * 1.5} points`);
+    }
+    
+    // Factor 3: Nearby safe zones (positive factor)
+    const safeZonesNearby = safetyZones.filter(zone => 
+      zone.safety === 'High Safety' && zone.distance < 2
+    ).length;
+    
+    if (safeZonesNearby > 0) {
+      score += Math.min(safeZonesNearby * 0.5, 1.5); // +0.5 per safe zone, max +1.5
+      console.log(`✅ ${safeZonesNearby} safe zone(s) nearby: +${Math.min(safeZonesNearby * 0.5, 1.5)} points`);
+    }
+    
+    // Clamp score between 0 and 10
+    const finalScore = Math.max(0, Math.min(10, score));
+    
+    console.log(`📊 Safety Score Calculated: ${finalScore.toFixed(1)}/10`);
+    setSafetyScore(finalScore.toFixed(1));
   };
 
   const fetchNearbyPlaces = async () => {
