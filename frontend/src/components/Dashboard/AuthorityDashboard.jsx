@@ -6,7 +6,10 @@ import { io } from 'socket.io-client'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
-const BACKEND_URL = 'http://localhost:5000'
+// Use Railway backend URL for WebSocket connection
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 
+                     import.meta.env.VITE_API_URL?.replace('/api', '') || 
+                     'http://localhost:5000'
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
 
 mapboxgl.accessToken = MAPBOX_TOKEN

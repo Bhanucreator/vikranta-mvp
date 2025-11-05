@@ -29,7 +29,10 @@ export default function UserDashboard() {
   const socketRef = useRef(null);
   
   const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoidmlrcmFudGEiLCJhIjoiY2xrbTJuMzJ5MDFvYjNlbzh4YnZ5YnpoYyJ9.placeholder';
-  const BACKEND_URL = 'http://localhost:5000';
+  // Use Railway backend URL for WebSocket connection
+  const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 
+                       import.meta.env.VITE_API_URL?.replace('/api', '') || 
+                       'http://localhost:5000';
   
   // Language translations
   const translations = {
