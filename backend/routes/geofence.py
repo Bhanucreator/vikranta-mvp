@@ -14,8 +14,10 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 # Check if API key is set before constructing URL
 if GEMINI_API_KEY:
-    GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}'
+    # Using Gemini 1.5 Flash (stable model)
+    GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}'
     print(f"[STARTUP] Geofence blueprint loaded. Gemini API Key: ✅ SET (length: {len(GEMINI_API_KEY)})")
+    print(f"[STARTUP] Using model: gemini-1.5-flash")
 else:
     GEMINI_API_URL = None
     print(f"[STARTUP] Geofence blueprint loaded. Gemini API Key: ❌ MISSING - Zone generation will not work!")
@@ -108,11 +110,37 @@ Return ONLY the JSON array, no markdown, no explanation."""
             }
         }
         
-        response = requests.post(GEMINI_API_URL, headers=headers, json=payload, timeout=30)
+        print(f"[Geofence] 🚀 Calling Gemini API...")
+        print(f"[Geofence] Model: gemini-1.5-flash")
+        
+        try:
+            response = requests.post(GEMINI_API_URL, headers=headers, json=payload, timeout=30)
+            print(f"[Geofence] ✅ Gemini API responded with status: {response.status_code}")
+        except requests.exceptions.Timeout:
+            print(f"[Geofence] ❌ Timeout after 30 seconds")
+            return jsonify({
+                'success': False,
+                'error': 'AI service timeout',
+                'zones': []
+            }), 504
+        except Exception as e:
+            print(f"[Geofence] ❌ Connection error: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to connect: {str(e)}',
+                'zones': []
+            }), 500
         
         if response.status_code != 200:
-            print(f"[Geofence] Gemini API Error: {response.text}")
-            return jsonify({'error': 'Failed to generate zones'}), 500
+            print(f"[Geofence] ❌ Gemini API Error:")
+            print(f"[Geofence] Status: {response.status_code}")
+            print(f"[Geofence] Body: {response.text[:500]}")
+            return jsonify({
+                'success': False,
+                'error': f'AI service returned {response.status_code}',
+                'details': response.text[:200],
+                'zones': []
+            }), 500
         
         result = response.json()
         

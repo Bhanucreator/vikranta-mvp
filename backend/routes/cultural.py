@@ -10,9 +10,10 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 # Check if API key is set before constructing URL
 if GEMINI_API_KEY:
-    # Using the latest stable Gemini model
-    GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}'
+    # Using Gemini 1.5 Flash (stable model)
+    GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}'
     print(f"[STARTUP] Cultural blueprint loaded. Gemini API Key: ✅ SET (length: {len(GEMINI_API_KEY)})")
+    print(f"[STARTUP] Using model: gemini-1.5-flash")
 else:
     GEMINI_API_URL = None
     print(f"[STARTUP] Cultural blueprint loaded. Gemini API Key: ❌ MISSING - Cultural features will not work!")
@@ -103,12 +104,35 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
         
         print(f"[Cultural] 🚀 Calling Gemini API...")
         print(f"[Cultural] API URL: {GEMINI_API_URL[:100]}...")
-        response = requests.post(GEMINI_API_URL, headers=headers, json=payload)
-        print(f"[Cultural] ✅ Gemini API responded with status: {response.status_code}")
+        
+        try:
+            response = requests.post(GEMINI_API_URL, headers=headers, json=payload, timeout=30)
+            print(f"[Cultural] ✅ Gemini API responded with status: {response.status_code}")
+        except requests.exceptions.Timeout:
+            print(f"[Cultural] ❌ Gemini API timeout after 30 seconds")
+            return jsonify({
+                'success': False,
+                'error': 'Gemini API timeout - service is slow to respond',
+                'places': []
+            }), 504
+        except Exception as e:
+            print(f"[Cultural] ❌ Gemini API connection error: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to connect to Gemini API: {str(e)}',
+                'places': []
+            }), 500
         
         if response.status_code != 200:
-            print(f"[Cultural] ❌ Gemini API Error: {response.text}")
-            return jsonify({'error': 'Failed to fetch cultural data from Gemini AI'}), 500
+            print(f"[Cultural] ❌ Gemini API Error Response:")
+            print(f"[Cultural] Status: {response.status_code}")
+            print(f"[Cultural] Body: {response.text[:500]}")  # First 500 chars
+            return jsonify({
+                'success': False,
+                'error': f'Gemini API returned {response.status_code}',
+                'details': response.text[:200],
+                'places': []
+            }), 500
         
         result = response.json()
         print(f"[Cultural] 📦 Response keys: {list(result.keys())}")
