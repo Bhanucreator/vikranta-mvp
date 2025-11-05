@@ -47,6 +47,14 @@ def generate_nearby_zones():
     This allows the system to work anywhere in the world!
     """
     try:
+        # Check if Gemini API key is configured
+        if not GEMINI_API_KEY:
+            print("[Geofence] ❌ GEMINI_API_KEY not configured")
+            return jsonify({
+                'error': 'AI service not configured',
+                'message': 'Please add GEMINI_API_KEY environment variable'
+            }), 503
+        
         data = request.get_json()
         latitude = data.get('latitude')
         longitude = data.get('longitude')
