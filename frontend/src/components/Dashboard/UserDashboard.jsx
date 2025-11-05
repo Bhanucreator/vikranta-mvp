@@ -533,93 +533,10 @@ export default function UserDashboard() {
           localStorage.setItem('vikranta_places', JSON.stringify(transformedPlaces));
         }
       } else if (response.data.message || (response.data.places && response.data.places.length === 0)) {
-        // Rate limited or no places - try loading from localStorage or use fallback
-        console.log('⚠️ Rate limited or no places, checking localStorage...');
-        
-        // Try loading from localStorage
-        if (typeof localStorage !== 'undefined') {
-          const cachedPlaces = localStorage.getItem('vikranta_places');
-          if (cachedPlaces) {
-            const parsed = JSON.parse(cachedPlaces);
-            console.log('✅ Loaded', parsed.length, 'places from localStorage cache');
-            setNearbyPlaces(parsed);
-            placesCacheRef.current = parsed;
-            return;
-          }
-        }
-        
-        // If no cached data, show fallback places for Bangalore
-        console.log('💡 Using fallback places for Bangalore');
-        const fallbackPlaces = [
-          {
-            id: 1,
-            name: 'Lalbagh Botanical Garden',
-            type: 'Garden',
-            description: 'Historic botanical garden with diverse flora',
-            distance: '3.5 km',
-            safety: 'High Safety',
-            rating: 4.6,
-            icon: '🌳',
-            dressCode: 'Casual',
-            openingHours: '6 AM - 7 PM',
-            entryFee: 'Rs 30',
-            bestTime: 'Morning',
-            safetyTips: 'Safe during daytime, well-maintained paths',
-            culturalInfo: 'Famous for its glasshouse and diverse plant species',
-            etiquette: 'Do not pluck flowers, keep premises clean',
-            photography: 'Allowed',
-            languages: ['English', 'Kannada', 'Hindi'],
-            emergencyContact: '100',
-            latitude: 12.9507,
-            longitude: 77.5848
-          },
-          {
-            id: 2,
-            name: 'Vidhana Soudha',
-            type: 'Monument',
-            description: 'Iconic government building, Neo-Dravidian architecture',
-            distance: '2.1 km',
-            safety: 'High Safety',
-            rating: 4.5,
-            icon: '🏛️',
-            dressCode: 'Formal',
-            openingHours: 'Exterior viewing only',
-            entryFee: 'Free',
-            bestTime: 'Evening (illuminated)',
-            safetyTips: 'Well-guarded area, safe for tourists',
-            culturalInfo: 'Seat of state legislature, beautiful architecture',
-            etiquette: 'Photography from outside only',
-            photography: 'Exterior only',
-            languages: ['English', 'Kannada'],
-            emergencyContact: '100',
-            latitude: 12.9796,
-            longitude: 77.5912
-          },
-          {
-            id: 3,
-            name: 'ISKCON Temple',
-            type: 'Temple',
-            description: 'Beautiful temple complex with spiritual atmosphere',
-            distance: '4.2 km',
-            safety: 'High Safety',
-            rating: 4.7,
-            icon: '🕉️',
-            dressCode: 'Modest clothing',
-            openingHours: '7:15 AM - 1 PM, 4 PM - 8:30 PM',
-            entryFee: 'Free',
-            bestTime: 'Evening Aarti',
-            safetyTips: 'Very safe, family-friendly environment',
-            culturalInfo: 'Dedicated to Lord Krishna, peaceful atmosphere',
-            etiquette: 'Remove footwear, no leather items inside',
-            photography: 'Limited areas only',
-            languages: ['English', 'Hindi', 'Kannada'],
-            emergencyContact: '100',
-            latitude: 13.0095,
-            longitude: 77.5521
-          }
-        ];
-        setNearbyPlaces(fallbackPlaces);
-        placesCacheRef.current = fallbackPlaces;
+        // Rate limited - show message and keep loading state
+        console.log('⚠️ Gemini API rate limited. Waiting for quota reset...');
+        console.log('💡 Rate limit resets every minute. Please wait 30-60 seconds and the data will load automatically.');
+        // Don't set fallback data - let it retry when cache expires
       } else {
         console.warn('⚠️ Unexpected response format');
       }
