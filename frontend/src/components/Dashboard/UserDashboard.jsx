@@ -32,6 +32,9 @@ export default function UserDashboard() {
   const lastPlacesFetchRef = useRef(null); // Track last places fetch
   const placesCacheRef = useRef(null); // Cache places data
   const lastZonesGenerateRef = useRef(null); // Track last zones generation
+  const lastWeatherFetchRef = useRef(null); // Track last weather fetch
+  const lastGeofenceCheckRef = useRef(null); // Track last geofence check
+  const lastLocationSendRef = useRef(null); // Track last location send
   
   const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoidmlrcmFudGEiLCJhIjoiY2xrbTJuMzJ5MDFvYjNlbzh4YnZ5YnpoYyJ9.placeholder';
   // Use Railway backend URL for WebSocket connection
@@ -104,13 +107,33 @@ export default function UserDashboard() {
 
   useEffect(() => {
     if (currentLocation) {
-      fetchNearbyPlaces(); // Refresh cultural places when location changes
-      fetchSafetyZones(); // Refresh nearby safety zones based on location
-      fetchWeather(); // Fetch real-time weather
-      fetchCulturalEvent(); // Fetch local cultural events
-      checkGeofences();
+      // Debounce these calls - only execute every 30 seconds minimum
+      const now = Date.now();
+      
+      fetchNearbyPlaces(); // Has its own 5-min cache
+      fetchCulturalEvent(); // Has its own 5-min cache
+      
+      // Weather - only fetch if 5+ minutes old
+      if (!lastWeatherFetchRef.current || (now - lastWeatherFetchRef.current > 5 * 60 * 1000)) {
+        fetchWeather();
+        lastWeatherFetchRef.current = now;
+      }
+      
+      // Safety zones - only fetch if 5+ minutes old
+      if (!lastGeofenceCheckRef.current || (now - lastGeofenceCheckRef.current > 5 * 60 * 1000)) {
+        fetchSafetyZones();
+        checkGeofences();
+        lastGeofenceCheckRef.current = now;
+      }
+      
+      // Location updates - only send if 30+ seconds old (reduce backend spam)
+      if (!lastLocationSendRef.current || (now - lastLocationSendRef.current > 30 * 1000)) {
+        sendLocationToBackend();
+        lastLocationSendRef.current = now;
+      }
+      
+      // Safety score can run every time (it's just calculation, no API call)
       calculateSafetyScore();
-      sendLocationToBackend();
     }
   }, [currentLocation]);
   
