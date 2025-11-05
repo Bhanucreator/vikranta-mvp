@@ -178,6 +178,28 @@ def create_app(config_name=None):
     def health_check():
         return jsonify({'status': 'healthy', 'message': 'VIKRANTA API is running'}), 200
     
+    # Environment variables check endpoint (for debugging)
+    @app.route('/api/debug/env-check')
+    def env_check():
+        """Check which environment variables are set (without exposing values)"""
+        env_status = {
+            'GEMINI_API_KEY': '✅ SET' if os.environ.get('GEMINI_API_KEY') else '❌ MISSING',
+            'SENDGRID_API_KEY': '✅ SET' if os.environ.get('SENDGRID_API_KEY') else '❌ MISSING',
+            'SMTP_PASSWORD': '✅ SET' if os.environ.get('SMTP_PASSWORD') else '❌ MISSING',
+            'DATABASE_URL': '✅ SET' if os.environ.get('DATABASE_URL') else '❌ MISSING',
+            'JWT_SECRET_KEY': '✅ SET' if os.environ.get('JWT_SECRET_KEY') else '❌ MISSING',
+            'TWILIO_ACCOUNT_SID': '✅ SET' if os.environ.get('TWILIO_ACCOUNT_SID') else '❌ MISSING',
+            'SMS_ENABLED': os.environ.get('SMS_ENABLED', 'false'),
+            'FLASK_ENV': os.environ.get('FLASK_ENV', 'not set'),
+        }
+        
+        # Check if API keys have proper length (without exposing them)
+        if os.environ.get('GEMINI_API_KEY'):
+            env_status['GEMINI_API_KEY_LENGTH'] = len(os.environ.get('GEMINI_API_KEY'))
+            env_status['GEMINI_API_KEY_PREFIX'] = os.environ.get('GEMINI_API_KEY')[:10] + '...'
+        
+        return jsonify(env_status), 200
+    
     # Create database tables
     with app.app_context():
         db.create_all()
