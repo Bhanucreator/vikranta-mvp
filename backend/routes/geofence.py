@@ -135,6 +135,16 @@ Return ONLY the JSON array, no markdown, no explanation."""
             print(f"[Geofence] ❌ Gemini API Error:")
             print(f"[Geofence] Status: {response.status_code}")
             print(f"[Geofence] Body: {response.text[:500]}")
+            
+            # Handle rate limiting (429) - return empty zones
+            if response.status_code == 429:
+                print(f"[Geofence] ⚠️ Rate limit exceeded - returning existing zones")
+                return jsonify({
+                    'success': True,
+                    'zones': [],
+                    'message': 'Rate limit exceeded, showing existing zones only'
+                }), 200
+            
             return jsonify({
                 'success': False,
                 'error': f'AI service returned {response.status_code}',
@@ -172,16 +182,22 @@ Return ONLY the JSON array, no markdown, no explanation."""
         for zone_data in zones_data:
             try:
                 coords = zone_data['coordinates']
-                # Close the polygon
-                coords.append(coords[0])
-                polygon = Polygon(coords)
+                # Close the polygon if not already closed
+                if coords[0] != coords[-1]:
+                    coords.append(coords[0])
+                
+                # Store polygon as GeoJSON text (model uses polygon_data field)
+                polygon_geojson = {
+                    "type": "Polygon",
+                    "coordinates": [coords]
+                }
                 
                 # Create geofence
                 geofence = Geofence(
                     name=zone_data['name'],
                     zone_type=zone_data['zone_type'],
                     risk_level=zone_data['risk_level'],
-                    polygon=from_shape(polygon, srid=4326),
+                    polygon_data=json.dumps(polygon_geojson),  # Store as JSON text
                     description=zone_data.get('description', 'Dynamically generated zone'),
                     active=True
                 )

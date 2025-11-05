@@ -127,6 +127,16 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
             print(f"[Cultural] ❌ Gemini API Error Response:")
             print(f"[Cultural] Status: {response.status_code}")
             print(f"[Cultural] Body: {response.text[:500]}")  # First 500 chars
+            
+            # Handle rate limiting (429) - return empty array instead of error
+            if response.status_code == 429:
+                print(f"[Cultural] ⚠️ Rate limit exceeded - returning empty results")
+                return jsonify({
+                    'success': True,  # Don't treat as error
+                    'places': [],
+                    'message': 'Rate limit exceeded, please wait a moment and try again'
+                }), 200  # Return 200 to avoid frontend error
+            
             return jsonify({
                 'success': False,
                 'error': f'Gemini API returned {response.status_code}',
