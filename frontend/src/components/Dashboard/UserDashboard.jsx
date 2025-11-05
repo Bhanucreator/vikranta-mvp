@@ -31,6 +31,7 @@ export default function UserDashboard() {
   const culturalCacheRef = useRef(null); // Cache cultural data
   const lastPlacesFetchRef = useRef(null); // Track last places fetch
   const placesCacheRef = useRef(null); // Cache places data
+  const lastZonesGenerateRef = useRef(null); // Track last zones generation
   
   const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoidmlrcmFudGEiLCJhIjoiY2xrbTJuMzJ5MDFvYjNlbzh4YnZ5YnpoYyJ9.placeholder';
   // Use Railway backend URL for WebSocket connection
@@ -618,6 +619,15 @@ export default function UserDashboard() {
       return;
     }
 
+    // Check cache - only generate zones if more than 10 minutes have passed
+    const now = Date.now();
+    const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+    
+    if (lastZonesGenerateRef.current && (now - lastZonesGenerateRef.current < CACHE_DURATION)) {
+      console.log('🗺️ Zone generation recently attempted (within 10 min), skipping to avoid rate limit');
+      return;
+    }
+
     try {
       console.log('🤖 Generating safety zones for:', currentLocation);
       const response = await api.post('/geofence/generate-nearby', {
@@ -628,11 +638,16 @@ export default function UserDashboard() {
 
       if (response.data.success) {
         console.log(`✅ Generated ${response.data.zones.length} new zones:`, response.data.zones);
+        lastZonesGenerateRef.current = now; // Update cache timestamp
         // Refresh the safety zones list
         await fetchSafetyZones();
+      } else if (response.data.message) {
+        console.log('⚠️ Zone generation rate limited, will retry later');
+        lastZonesGenerateRef.current = now; // Still update timestamp to prevent spam
       }
     } catch (error) {
       console.error('❌ Error generating safety zones:', error);
+      lastZonesGenerateRef.current = now; // Update timestamp even on error to prevent spam
     }
   };
   
