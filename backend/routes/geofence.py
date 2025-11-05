@@ -14,10 +14,10 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 # Check if API key is set before constructing URL
 if GEMINI_API_KEY:
-    # Using Gemini Pro (stable v1 API) - gemini-pro is the most stable model
-    GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={GEMINI_API_KEY}'
+    # Using Gemini 2.0 Flash Experimental (v1beta API)
+    GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={GEMINI_API_KEY}'
     print(f"[STARTUP] Geofence blueprint loaded. Gemini API Key: ✅ SET (length: {len(GEMINI_API_KEY)})")
-    print(f"[STARTUP] Using model: gemini-pro (v1 API)")
+    print(f"[STARTUP] Using model: gemini-2.0-flash-exp (v1beta API)")
 else:
     GEMINI_API_URL = None
     print(f"[STARTUP] Geofence blueprint loaded. Gemini API Key: ❌ MISSING - Zone generation will not work!")
