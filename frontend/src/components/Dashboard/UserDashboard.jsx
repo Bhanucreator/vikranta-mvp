@@ -495,6 +495,7 @@ export default function UserDashboard() {
 
       if (response.data.success && response.data.places) {
         console.log('📝 Processing', response.data.places.length, 'places from Gemini AI');
+        console.log('📍 First place sample:', JSON.stringify(response.data.places[0], null, 2));
         
         // Transform Gemini AI data to match our format
         const transformedPlaces = response.data.places.map((place, index) => ({
@@ -522,6 +523,7 @@ export default function UserDashboard() {
         }));
         
         console.log('✅ Cultural places updated with', transformedPlaces.length, 'places');
+        console.log('📍 Transformed places:', transformedPlaces.map(p => ({ name: p.name, lat: p.latitude, lng: p.longitude })));
         setNearbyPlaces(transformedPlaces);
         placesCacheRef.current = transformedPlaces;
         lastPlacesFetchRef.current = now;
@@ -561,6 +563,13 @@ export default function UserDashboard() {
       // Fetch real geofences from backend
       const response = await api.get('/geofence/list?active=true');
       const { geofences } = response.data;
+      
+      console.log('[fetchSafetyZones] 📊 Received geofences:', geofences?.length || 0);
+      if (geofences && geofences.length > 0) {
+        console.log('[fetchSafetyZones] 📍 First geofence sample:', JSON.stringify(geofences[0], null, 2));
+      } else {
+        console.warn('[fetchSafetyZones] ⚠️ No geofences returned from backend');
+      }
       
       if (geofences && geofences.length > 0) {
         // Helper function to calculate distance between two points (Haversine formula)
@@ -616,6 +625,8 @@ export default function UserDashboard() {
           .slice(0, 10); // Show max 10 zones
 
         console.log(`📍 Found ${nearbyZones.length} zones within 50km`);
+        console.log(`🗺️ Setting ${geofences.length} geofences for map rendering`);
+        console.log(`🗺️ Sample geofence polygon:`, geofences[0]?.polygon);
         setSafetyZones(nearbyZones);
         setGeofences(geofences); // Store raw geofence data for map rendering
         
