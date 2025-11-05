@@ -3,8 +3,14 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 import os
 import requests
 import json
+from datetime import datetime, timedelta
 
 cultural_bp = Blueprint('cultural', __name__)
+
+# Cache for Gemini API responses (in-memory cache)
+_cultural_cache = {}
+_events_cache = {}
+CACHE_DURATION_MINUTES = 5
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
@@ -47,6 +53,25 @@ def get_nearby_cultural_places():
         if not latitude or not longitude:
             print("[Cultural] ERROR: Missing latitude or longitude")
             return jsonify({'error': 'Latitude and longitude are required'}), 400
+        
+        # Create cache key based on location (rounded to 2 decimal places)
+        cache_key = f"{round(latitude, 2)}_{round(longitude, 2)}_{radius}_{language}"
+        
+        # Check cache first
+        if cache_key in _cultural_cache:
+            cached_data, cached_time = _cultural_cache[cache_key]
+            if datetime.now() - cached_time < timedelta(minutes=CACHE_DURATION_MINUTES):
+                print(f"[Cultural] ✅ Returning cached places for {cache_key} (age: {(datetime.now() - cached_time).seconds}s)")
+                return jsonify({
+                    'success': True,
+                    'places': cached_data,
+                    'user_location': {'latitude': latitude, 'longitude': longitude},
+                    'cached': True
+                }), 200
+            else:
+                # Cache expired
+                print(f"[Cultural] 🕐 Cache expired for {cache_key}")
+                del _cultural_cache[cache_key]
         
         if not GEMINI_API_KEY or not GEMINI_API_URL:
             print("[Cultural] ERROR: GEMINI_API_KEY not configured")
@@ -173,6 +198,10 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
             try:
                 places_data = json.loads(text_response)
                 print(f"[Cultural] ✅ Successfully parsed {len(places_data)} places")
+                
+                # Cache the successful response
+                _cultural_cache[cache_key] = (places_data, datetime.now())
+                print(f"[Cultural] ✅ Cached places for {cache_key}")
             except json.JSONDecodeError as e:
                 print(f"[Cultural] ❌ JSON Parse Error: {e}")
                 print(f"[Cultural] 📄 Response text (first 500 chars): {text_response[:500]}")
@@ -215,6 +244,22 @@ def get_cultural_events():
         
         print(f"[Cultural Events] Fetching events for: {latitude}, {longitude}")
         
+        # Create cache key
+        cache_key = f"{round(latitude, 2)}_{round(longitude, 2)}_events"
+        
+        # Check cache first
+        if cache_key in _events_cache:
+            cached_data, cached_time = _events_cache[cache_key]
+            if datetime.now() - cached_time < timedelta(minutes=CACHE_DURATION_MINUTES):
+                print(f"[Cultural Events] ✅ Returning cached event for {cache_key}")
+                return jsonify({
+                    'success': True,
+                    'event': cached_data,
+                    'cached': True
+                }), 200
+            else:
+                del _events_cache[cache_key]
+        
         if not GEMINI_API_KEY:
             print("[Cultural Events] ERROR: GEMINI_API_KEY not configured")
             # Return fallback event
@@ -227,8 +272,8 @@ def get_cultural_events():
             }), 200
         
         # Create prompt for Gemini AI to get current events
-        from datetime import datetime
-        current_date = datetime.now().strftime("%B %d, %Y")
+        from datetime import datetime as dt
+        current_date = dt.now().strftime("%B %d, %Y")
         
         prompt = f"""You are a local events API. Return ONLY valid JSON, no markdown.
 
@@ -296,6 +341,10 @@ Return ONLY the JSON object, no other text."""
                 try:
                     event_data = json.loads(text_response)
                     print(f"[Cultural Events] ✅ Found event: {event_data.get('name', 'Unknown')}")
+                    
+                    # Cache the successful response
+                    _events_cache[cache_key] = (event_data, datetime.now())
+                    print(f"[Cultural Events] ✅ Cached event for {cache_key}")
                     
                     return jsonify({
                         'success': True,

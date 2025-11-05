@@ -7,8 +7,13 @@ from shapely.geometry import Point, Polygon
 import os
 import requests
 import json
+from datetime import datetime, timedelta
 
 geofence_bp = Blueprint('geofence', __name__)
+
+# Cache for Gemini API responses (in-memory cache)
+_zone_generation_cache = {}
+CACHE_DURATION_MINUTES = 10
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
@@ -72,6 +77,25 @@ def generate_nearby_zones():
         
         if not latitude or not longitude:
             return jsonify({'error': 'Latitude and longitude are required'}), 400
+        
+        # Create cache key based on location (rounded to 2 decimal places to group nearby requests)
+        cache_key = f"{round(latitude, 2)}_{round(longitude, 2)}_{radius}"
+        
+        # Check cache first
+        if cache_key in _zone_generation_cache:
+            cached_data, cached_time = _zone_generation_cache[cache_key]
+            if datetime.now() - cached_time < timedelta(minutes=CACHE_DURATION_MINUTES):
+                print(f"[Geofence] ✅ Returning cached zones for {cache_key} (age: {(datetime.now() - cached_time).seconds}s)")
+                return jsonify({
+                    'success': True,
+                    'zones': cached_data,
+                    'cached': True,
+                    'message': 'Zones retrieved from cache'
+                }), 200
+            else:
+                # Cache expired, remove it
+                print(f"[Geofence] 🕐 Cache expired for {cache_key}")
+                del _zone_generation_cache[cache_key]
         
         print(f"[Geofence] Generating zones for location: {latitude}, {longitude}")
         
@@ -209,6 +233,10 @@ Return ONLY the JSON array, no markdown, no explanation."""
                 continue
         
         db.session.commit()
+        
+        # Cache the successful response
+        _zone_generation_cache[cache_key] = (generated_zones, datetime.now())
+        print(f"[Geofence] ✅ Cached zones for {cache_key}")
         
         return jsonify({
             'success': True,
