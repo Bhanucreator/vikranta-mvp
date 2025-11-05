@@ -253,3 +253,56 @@ Return ONLY the JSON array, no markdown, no explanation."""
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+
+@geofence_bp.route('/create-bangalore-zones', methods=['POST'])
+def create_bangalore_zones():
+    """Quick endpoint to add Bangalore zones to database"""
+    try:
+        data = request.get_json()
+        zones_data = data.get('zones', [])
+        
+        created_zones = []
+        for zone_data in zones_data:
+            try:
+                coords = zone_data['coordinates']
+                # Close the polygon if not already closed
+                if coords[0] != coords[-1]:
+                    coords.append(coords[0])
+                
+                # Store polygon as GeoJSON text
+                polygon_geojson = {
+                    "type": "Polygon",
+                    "coordinates": [coords]
+                }
+                
+                # Create geofence
+                geofence = Geofence(
+                    name=zone_data['name'],
+                    zone_type=zone_data['zone_type'],
+                    risk_level=zone_data['risk_level'],
+                    polygon_data=json.dumps(polygon_geojson),
+                    description=zone_data.get('description', ''),
+                    active=True
+                )
+                db.session.add(geofence)
+                created_zones.append(zone_data['name'])
+                print(f"[Geofence] Created: {zone_data['name']}")
+            except Exception as e:
+                print(f"[Geofence] Error creating zone: {e}")
+                continue
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Created {len(created_zones)} zones',
+            'zones': created_zones
+        }), 200
+        
+    except Exception as e:
+        print(f"[Geofence] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
