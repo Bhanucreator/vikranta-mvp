@@ -518,8 +518,6 @@ export default function UserDashboard() {
       // Keep existing data on error (don't reset)
     }
   };
-    }
-  };
 
   // Helper function to get appropriate icon based on place type
   const getPlaceIcon = (type) => {
