@@ -11,7 +11,14 @@ import json
 geofence_bp = Blueprint('geofence', __name__)
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}'
+
+# Check if API key is set before constructing URL
+if GEMINI_API_KEY:
+    GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}'
+    print(f"[STARTUP] Geofence blueprint loaded. Gemini API Key: ✅ SET (length: {len(GEMINI_API_KEY)})")
+else:
+    GEMINI_API_URL = None
+    print(f"[STARTUP] Geofence blueprint loaded. Gemini API Key: ❌ MISSING - Zone generation will not work!")
 
 @geofence_bp.route('/list', methods=['GET'])
 def list_geofences():
@@ -48,12 +55,13 @@ def generate_nearby_zones():
     """
     try:
         # Check if Gemini API key is configured
-        if not GEMINI_API_KEY:
+        if not GEMINI_API_KEY or not GEMINI_API_URL:
             print("[Geofence] ❌ GEMINI_API_KEY not configured")
             return jsonify({
-                'error': 'AI service not configured',
-                'message': 'Please add GEMINI_API_KEY environment variable'
-            }), 503
+                'success': False,
+                'error': 'AI service not configured. Please set GEMINI_API_KEY environment variable in Railway.',
+                'zones': []
+            }), 503  # Service Unavailable
         
         data = request.get_json()
         latitude = data.get('latitude')

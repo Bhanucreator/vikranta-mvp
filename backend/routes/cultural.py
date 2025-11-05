@@ -7,10 +7,15 @@ import json
 cultural_bp = Blueprint('cultural', __name__)
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-# Using the latest stable Gemini model
-GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}'
 
-print(f"[STARTUP] Cultural blueprint loaded. Gemini API Key: {'✅ SET' if GEMINI_API_KEY else '❌ MISSING'}")
+# Check if API key is set before constructing URL
+if GEMINI_API_KEY:
+    # Using the latest stable Gemini model
+    GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}'
+    print(f"[STARTUP] Cultural blueprint loaded. Gemini API Key: ✅ SET (length: {len(GEMINI_API_KEY)})")
+else:
+    GEMINI_API_URL = None
+    print(f"[STARTUP] Cultural blueprint loaded. Gemini API Key: ❌ MISSING - Cultural features will not work!")
 
 @cultural_bp.route('/nearby', methods=['POST'])
 @jwt_required(optional=True)  # Make JWT optional for debugging
@@ -42,9 +47,13 @@ def get_nearby_cultural_places():
             print("[Cultural] ERROR: Missing latitude or longitude")
             return jsonify({'error': 'Latitude and longitude are required'}), 400
         
-        if not GEMINI_API_KEY:
+        if not GEMINI_API_KEY or not GEMINI_API_URL:
             print("[Cultural] ERROR: GEMINI_API_KEY not configured")
-            return jsonify({'error': 'Gemini API key not configured'}), 500
+            return jsonify({
+                'success': False,
+                'error': 'Gemini API key not configured. Please set GEMINI_API_KEY environment variable in Railway.',
+                'places': []
+            }), 503  # Service Unavailable
         
         # Create prompt for Gemini AI
         prompt = f"""You are a tourist guide API. Return ONLY valid JSON, no markdown, no explanation.
