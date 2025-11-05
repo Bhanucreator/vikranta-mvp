@@ -27,6 +27,10 @@ export default function UserDashboard() {
   const [incidentStatus, setIncidentStatus] = useState(null);
   const [showStatusNotification, setShowStatusNotification] = useState(false);
   const socketRef = useRef(null);
+  const lastCulturalFetchRef = useRef(null); // Track last fetch time
+  const culturalCacheRef = useRef(null); // Cache cultural data
+  const lastPlacesFetchRef = useRef(null); // Track last places fetch
+  const placesCacheRef = useRef(null); // Cache places data
   
   const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoidmlrcmFudGEiLCJhIjoiY2xrbTJuMzJ5MDFvYjNlbzh4YnZ5YnpoYyJ9.placeholder';
   // Use Railway backend URL for WebSocket connection
@@ -441,6 +445,17 @@ export default function UserDashboard() {
       return;
     }
     
+    // Check cache - only fetch if more than 5 minutes have passed
+    const now = Date.now();
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+    
+    if (lastPlacesFetchRef.current && 
+        (now - lastPlacesFetchRef.current < CACHE_DURATION) &&
+        placesCacheRef.current) {
+      console.log('🗺️ Using cached places data (within 5 min window)');
+      return; // Use existing state, don't refetch
+    }
+    
     try {
       console.log('🤖 Calling Gemini AI with location:', currentLocation.latitude, currentLocation.longitude);
       
@@ -484,20 +499,25 @@ export default function UserDashboard() {
         
         console.log('✅ Cultural places updated with', transformedPlaces.length, 'places');
         setNearbyPlaces(transformedPlaces);
+        placesCacheRef.current = transformedPlaces;
+        lastPlacesFetchRef.current = now;
         
         // Store in localStorage for offline mode
         if (typeof localStorage !== 'undefined') {
           localStorage.setItem('vikranta_places', JSON.stringify(transformedPlaces));
         }
+      } else if (response.data.message) {
+        // Rate limited - keep existing data
+        console.log('⚠️ Rate limited, keeping existing places data');
       } else {
         console.warn('⚠️ No places in Gemini response');
-        setNearbyPlaces([]); // Empty array, will show loading state
       }
     } catch (error) {
       console.error('❌ Error fetching cultural places from Gemini AI:', error);
       console.error('Error details:', error.response?.data || error.message);
-      // Keep empty array to show loading state instead of mock data
-      setNearbyPlaces([]);
+      // Keep existing data on error (don't reset)
+    }
+  };
     }
   };
 
@@ -669,6 +689,17 @@ export default function UserDashboard() {
   const fetchCulturalEvent = async () => {
     if (!currentLocation) return;
 
+    // Check cache - only fetch if more than 5 minutes have passed
+    const now = Date.now();
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+    
+    if (lastCulturalFetchRef.current && 
+        (now - lastCulturalFetchRef.current < CACHE_DURATION) &&
+        culturalCacheRef.current) {
+      console.log('🎭 Using cached cultural data (within 5 min window)');
+      return; // Use existing state, don't refetch
+    }
+
     try {
       console.log('🎭 Fetching cultural events for:', currentLocation);
       const response = await api.get(`/cultural/events`, {
@@ -678,13 +709,33 @@ export default function UserDashboard() {
         }
       });
 
-      if (response.data.success && response.data.event) {
-        setCulturalEvent(response.data.event);
-        console.log('✅ Cultural event updated:', response.data.event);
+      // Backend returns 'places' array OR 'event' object
+      if (response.data.success) {
+        if (response.data.places && response.data.places.length > 0) {
+          // Use first place as the cultural event
+          const firstPlace = response.data.places[0];
+          const eventData = {
+            name: firstPlace.name || 'Cultural Place',
+            date: firstPlace.description || 'Nearby attraction'
+          };
+          setCulturalEvent(eventData);
+          culturalCacheRef.current = eventData;
+          lastCulturalFetchRef.current = now;
+          console.log('✅ Cultural event updated:', eventData);
+        } else if (response.data.event) {
+          // Fallback to old format
+          setCulturalEvent(response.data.event);
+          culturalCacheRef.current = response.data.event;
+          lastCulturalFetchRef.current = now;
+          console.log('✅ Cultural event updated:', response.data.event);
+        } else if (response.data.message) {
+          // Rate limited - keep existing data
+          console.log('⚠️ Rate limited, keeping existing data');
+        }
       }
     } catch (error) {
       console.error('❌ Error fetching cultural event:', error);
-      // Keep the loading/default state
+      // Keep the existing state on error (don't reset to loading)
     }
   };
 
