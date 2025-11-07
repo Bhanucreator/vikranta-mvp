@@ -76,7 +76,7 @@ def trigger_panic():
             status='active',
             priority='critical',
             location=from_shape(point, srid=4326),
-            address=data.get('address'),
+            address=data.get('address') or f"Location at {data['latitude']:.4f}, {data['longitude']:.4f}",
             description=data.get('description', 'Emergency panic button pressed')
         )
         db.session.add(incident)
