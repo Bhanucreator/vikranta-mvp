@@ -803,14 +803,13 @@ export default function UserDashboard() {
     setEmergencyActive(true);
     try {
       console.log('🚀 Sending SOS alert to backend with location:', currentLocation);
-      const response = await api.post('/incident/create', {
-        incident_type: 'SOS',
+      const response = await api.post('/incident/panic', {
         description: 'SOS button pressed by user.',
         latitude: currentLocation.latitude,
         longitude: currentLocation.longitude,
       });
 
-      if (response.data.success) {
+      if (response.data.message === 'Emergency alert sent successfully') {
         alert('SOS alert sent successfully. Help is on the way.');
         console.log('✅ SOS alert successfully processed by backend.');
       } else {
