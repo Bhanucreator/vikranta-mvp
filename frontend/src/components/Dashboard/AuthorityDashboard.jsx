@@ -228,8 +228,17 @@ export default function AuthorityDashboard() {
       }
     })
 
-    // Add tourist markers (GREEN)
+    // Add tourist markers (GREEN) - only if they don't have an active incident
+    const activeIncidentUserIds = incidents
+      .filter(i => i.status !== 'resolved')
+      .map(i => i.user?.id);
+
     tourists.forEach(tourist => {
+      // If tourist has an active incident, don't show their regular marker
+      if (activeIncidentUserIds.includes(tourist.id)) {
+        return;
+      }
+
       if (tourist.latitude && tourist.longitude) {
         const el = document.createElement('div')
         el.className = 'tourist-marker'
