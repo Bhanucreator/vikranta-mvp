@@ -110,8 +110,12 @@ export default function UserDashboard() {
       // Debounce these calls - only execute every 30 seconds minimum
       const now = Date.now();
       
-      fetchNearbyPlaces(); // Has its own 5-min cache
-      fetchCulturalEvent(); // Has its own 5-min cache
+      // Cultural places and events - only fetch if 30+ seconds old
+      if (!lastPlacesFetchRef.current || (now - lastPlacesFetchRef.current > 30 * 1000)) {
+        fetchNearbyPlaces(); // Has its own 5-min cache
+        fetchCulturalEvent(); // Has its own 5-min cache
+        lastPlacesFetchRef.current = now; // Use one ref for both to sync them
+      }
       
       // Weather - only fetch if 5+ minutes old
       if (!lastWeatherFetchRef.current || (now - lastWeatherFetchRef.current > 5 * 60 * 1000)) {
