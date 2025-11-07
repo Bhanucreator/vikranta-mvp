@@ -95,7 +95,7 @@ def trigger_panic():
             sms_message = (
                 f"🚨 VIKRANTA SOS ALERT\n"
                 f"User: {user.name} ({user.phone})\n"
-                f"Location: {incident.address or f'Lat: {data['latitude']}, Lon: {data['longitude']}'}\n"
+                    f"Location: {incident.address or f'Lat: {data.get("latitude")}, Lon: {data.get("longitude")}'}\n"
                 f"Time: {datetime.now().strftime('%I:%M %p')}"
             )
             
