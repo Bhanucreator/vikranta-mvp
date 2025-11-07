@@ -3,11 +3,10 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_req
 from extensions import db
 from models.user import User
 from models.incident import Incident
-from geoalchemy2.shape import from_shape
-from shapely.geometry import Point
 from utils.notification import send_emergency_alert, send_sms
 from datetime import datetime
 import logging
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +27,8 @@ def emit_incident_alert(incident, user):
                 'description': incident.description,
                 'address': incident.address,
                 'location': {
-                    'latitude': db.session.scalar(incident.location.ST_Y()),
-                    'longitude': db.session.scalar(incident.location.ST_X())
+                    'latitude': incident.latitude,
+                    'longitude': incident.longitude
                 },
                 'user': {
                     'id': user.id,
@@ -46,7 +45,6 @@ def emit_incident_alert(incident, user):
             print(f"⚠️ SocketIO is None!")
     except Exception as e:
         print(f"⚠️ Could not emit WebSocket alert: {e}")
-        import traceback
         traceback.print_exc()
 
 @incident_bp.route('/panic', methods=['POST', 'OPTIONS'])
@@ -69,13 +67,13 @@ def trigger_panic():
         return jsonify({'error': 'Location is required'}), 400
     
     try:
-        point = Point(data['longitude'], data['latitude'])
         incident = Incident(
             user_id=user_id,
             type='panic',
             status='active',
             priority='critical',
-            location=from_shape(point, srid=4326),
+            latitude=data['latitude'],
+            longitude=data['longitude'],
             address=data.get('address') or f"Location at {data['latitude']:.4f}, {data['longitude']:.4f}",
             description=data.get('description', 'Emergency panic button pressed')
         )
