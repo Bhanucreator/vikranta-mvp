@@ -123,6 +123,8 @@ def trigger_panic():
         }), 201
     except Exception as e:
         print(f"❌ Error creating panic incident: {e}")
+        import traceback
+        traceback.print_exc() # This will print the full error stack trace
         db.session.rollback()
         return jsonify({'error': 'Failed to create incident', 'details': str(e)}), 500
 
