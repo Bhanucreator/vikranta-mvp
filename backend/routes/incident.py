@@ -82,35 +82,40 @@ def trigger_panic():
         
         print(f"🚨 Panic alert created: Incident #{incident.id} by user {user.name}")
         
-        # Send SMS to the central emergency number
+        # Send SMS to the user's emergency contact
         try:
-            emergency_number = current_app.config.get('EMERGENCY_CONTACT_NUMBER')
+            emergency_number = user.emergency_contact
             if not emergency_number:
-                raise ValueError("EMERGENCY_CONTACT_NUMBER is not configured in the application.")
+                # Log a warning but don't fail the whole request
+                logger.warning(f"User {user.id} does not have an emergency contact set. Skipping SMS.")
+                print(f"⚠️ User {user.name} has no emergency contact. Skipping SMS.")
+            else:
+                print(f"📱 Attempting to send SOS SMS to user's emergency contact: {emergency_number}")
+                
+                # Create the location string safely
+                lat = data.get("latitude")
+                lon = data.get("longitude")
+                location_str = incident.address or f"Lat: {lat}, Lon: {lon}"
 
-            print(f"📱 Attempting to send SOS SMS to central emergency number: {emergency_number}")
-            
-            # Create the location string safely to avoid nested f-string issues
-            lat = data.get("latitude")
-            lon = data.get("longitude")
-            location_str = incident.address or f"Lat: {lat}, Lon: {lon}"
-
-            sms_message = (
-                f"🚨 VIKRANTA SOS ALERT\n"
-                f"User: {user.name} ({user.phone})\n"
-                f"Location: {location_str}\n"
-                f"Time: {datetime.now().strftime('%I:%M %p')}"
-            )
-            
-            send_sms(emergency_number, sms_message)
-            logger.info(f"📱 SOS SMS sent successfully to {emergency_number}")
-            print(f"✅ SOS SMS sent successfully to {emergency_number}")
+                sms_message = (
+                    f"🚨 VIKRANTA SOS ALERT\n"
+                    f"From: {user.name} ({user.phone})\n"
+                    f"Location: {location_str}\n"
+                    f"Time: {datetime.now().strftime('%I:%M %p')}"
+                )
+                
+                send_sms(emergency_number, sms_message)
+                logger.info(f"📱 SOS SMS sent successfully to {emergency_number}")
+                print(f"✅ SOS SMS sent successfully to {emergency_number}")
 
         except Exception as e:
             logger.error(f"❌ CRITICAL: Failed to send SOS SMS: {str(e)}")
             print(f"❌ CRITICAL: Failed to send SOS SMS: {str(e)}")
-            # Return an error response because the primary notification failed
-            return jsonify({'error': 'Failed to send emergency SMS notification.', 'details': str(e)}), 500        # Send real-time WebSocket alert to authorities
+            traceback.print_exc()
+            # Don't fail the entire request if SMS fails, as the main alert was created.
+            # The authority will still see it. We can return a partial success or just log it.
+        
+        # Send real-time WebSocket alert to authorities
         emit_incident_alert(incident, user)
         
         return jsonify({
