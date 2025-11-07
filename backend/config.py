@@ -54,7 +54,11 @@ class Config:
     TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
     TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
     TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
+    EMERGENCY_CONTACT_NUMBER = os.environ.get('EMERGENCY_CONTACT_NUMBER')
     SMS_ENABLED = os.environ.get('SMS_ENABLED', 'false').lower() == 'true'
+
+    if IS_PRODUCTION and SMS_ENABLED and not EMERGENCY_CONTACT_NUMBER:
+        raise ValueError("FATAL: EMERGENCY_CONTACT_NUMBER must be set in the production environment when SMS is enabled.")
 
     # --- Application Settings ---
     FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')

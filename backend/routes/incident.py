@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
 from extensions import db
 from models.user import User
@@ -84,40 +84,30 @@ def trigger_panic():
         
         print(f"🚨 Panic alert created: Incident #{incident.id} by user {user.name}")
         
-        # Send email notification
+        # Send SMS to the central emergency number
         try:
-            send_emergency_alert(incident, user)
+            emergency_number = current_app.config.get('EMERGENCY_CONTACT_NUMBER')
+            if not emergency_number:
+                raise ValueError("EMERGENCY_CONTACT_NUMBER is not configured in the application.")
+
+            print(f"📱 Attempting to send SOS SMS to central emergency number: {emergency_number}")
+            
+            sms_message = (
+                f"🚨 VIKRANTA SOS ALERT\n"
+                f"User: {user.name} ({user.phone})\n"
+                f"Location: {incident.address or f'Lat: {data['latitude']}, Lon: {data['longitude']}'}\n"
+                f"Time: {datetime.now().strftime('%I:%M %p')}"
+            )
+            
+            send_sms(emergency_number, sms_message)
+            logger.info(f"📱 SOS SMS sent successfully to {emergency_number}")
+            print(f"✅ SOS SMS sent successfully to {emergency_number}")
+
         except Exception as e:
-            print(f"⚠️ Email notification failed: {e}")
-        
-        # Send SMS to tourist's emergency contact
-        try:
-            if user.emergency_contact:
-                print(f"📱 Attempting to send SMS to emergency contact: {user.emergency_contact}")
-                sms_message = (
-                    f"🚨 VIKRANTA EMERGENCY ALERT\n"
-                    f"{user.name} triggered SOS.\n"
-                    f"Location: {incident.address or 'GPS coordinates available'}\n"
-                    f"Time: {datetime.now().strftime('%I:%M %p')}\n"
-                    f"Authorities have been notified."
-                )
-                sms_result = send_sms(user.emergency_contact, sms_message)
-                if sms_result:
-                    logger.info(f"📱 Emergency notification sent to {user.emergency_contact}")
-                    print(f"✅ Emergency notification sent (SMS/In-app)")
-                else:
-                    logger.warning(f"⚠️ SMS skipped, using in-app notification only")
-                    print(f"💬 Emergency notification delivered via in-app alert")
-            else:
-                print(f"⚠️ No emergency contact found for user {user.name}")
-                logger.warning(f"No emergency contact for user {user.name}")
-        except Exception as e:
-            logger.error(f"❌ Failed to send emergency SMS: {str(e)}")
-            print(f"❌ Exception sending emergency SMS: {str(e)}")
-            import traceback
-            traceback.print_exc()
-        
-        # Send real-time WebSocket alert to authorities
+            logger.error(f"❌ CRITICAL: Failed to send SOS SMS: {str(e)}")
+            print(f"❌ CRITICAL: Failed to send SOS SMS: {str(e)}")
+            # Return an error response because the primary notification failed
+            return jsonify({'error': 'Failed to send emergency SMS notification.', 'details': str(e)}), 500        # Send real-time WebSocket alert to authorities
         emit_incident_alert(incident, user)
         
         return jsonify({

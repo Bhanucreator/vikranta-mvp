@@ -123,40 +123,46 @@ def send_email(to_email, subject, body, html=None):
         return False
 
 def send_sms(phone_number, message):
-    """Send SMS notification via Twilio"""
+    """Send SMS notification via Twilio.
+    
+    Raises:
+        Exception: If sending SMS fails for reasons other than Twilio trial account limitations.
+    """
     print(f"📱 send_sms called - Phone: {phone_number}, Message length: {len(message)}")
+    
+    # Check if SMS is enabled
+    sms_enabled = current_app.config.get('SMS_ENABLED')
+    print(f"📱 SMS_ENABLED config value: {sms_enabled} (type: {type(sms_enabled)})")
+    
+    if not sms_enabled:
+        logger.info(f"📱 SMS disabled. Would send to {phone_number}: {message}")
+        print(f"[SMS DISABLED] To: {phone_number} | Message: {message}")
+        return True
+    
+    print(f"📱 SMS is enabled, initializing Twilio client...")
+    client = get_twilio_client()
+    if not client:
+        logger.warning(f"⚠️ Twilio not configured. SMS to {phone_number} not sent")
+        print(f"[SMS NOT CONFIGURED] To: {phone_number} | Message: {message}")
+        # Raise an exception so the caller knows it failed
+        raise Exception("Twilio client is not configured. Cannot send SMS.")
+
+    print(f"✅ Twilio client initialized successfully")
+    
+    # Format phone number (ensure it starts with +)
+    original_phone = phone_number
+    if not phone_number.startswith('+'):
+        # Remove leading zero for Indian numbers (080xxx -> 80xxx)
+        if phone_number.startswith('0'):
+            phone_number = phone_number[1:]
+        # Assume Indian number if no country code
+        phone_number = f"+91{phone_number}"
+    print(f"📱 Phone formatted: {original_phone} -> {phone_number}")
+    
+    from_number = current_app.config.get('TWILIO_PHONE_NUMBER')
+    print(f"📱 From number: {from_number}")
+    
     try:
-        # Check if SMS is enabled
-        sms_enabled = current_app.config.get('SMS_ENABLED')
-        print(f"📱 SMS_ENABLED config value: {sms_enabled} (type: {type(sms_enabled)})")
-        
-        if not sms_enabled:
-            logger.info(f"📱 SMS disabled. Would send to {phone_number}: {message}")
-            print(f"[SMS DISABLED] To: {phone_number} | Message: {message}")
-            return True
-        
-        print(f"📱 SMS is enabled, initializing Twilio client...")
-        client = get_twilio_client()
-        if not client:
-            logger.warning(f"⚠️ Twilio not configured. SMS to {phone_number} not sent")
-            print(f"[SMS NOT CONFIGURED] To: {phone_number} | Message: {message}")
-            return False
-        
-        print(f"✅ Twilio client initialized successfully")
-        
-        # Format phone number (ensure it starts with +)
-        original_phone = phone_number
-        if not phone_number.startswith('+'):
-            # Remove leading zero for Indian numbers (080xxx -> 80xxx)
-            if phone_number.startswith('0'):
-                phone_number = phone_number[1:]
-            # Assume Indian number if no country code
-            phone_number = f"+91{phone_number}"
-        print(f"📱 Phone formatted: {original_phone} -> {phone_number}")
-        
-        from_number = current_app.config.get('TWILIO_PHONE_NUMBER')
-        print(f"📱 From number: {from_number}")
-        
         # Send SMS via Twilio
         print(f"📱 Calling Twilio API to send SMS...")
         message_obj = client.messages.create(
@@ -172,21 +178,22 @@ def send_sms(phone_number, message):
     except Exception as e:
         error_msg = str(e).lower()
         
-        # Gracefully handle trial account limitation without error
+        # Gracefully handle trial account limitation without erroring
         if "unverified" in error_msg or "trial" in error_msg:
             logger.warning(f"⚠️ SMS skipped (trial account): {phone_number}")
             print(f"⚠️ SMS skipped for {phone_number} (Twilio trial account - number unverified)")
-            print(f"� Notification delivered via WebSocket/in-app instead")
+            print(f" Notification delivered via WebSocket/in-app instead")
             # Return True to indicate "handled" (not a critical error)
             return True
         
-        # For other errors, log and return False
+        # For all other errors, re-raise the exception to be handled by the caller
         logger.error(f"❌ Failed to send SMS to {phone_number}: {str(e)}")
         print(f"❌ SMS Error to {phone_number}: {str(e)}")
         import traceback
         print("Full traceback:")
         traceback.print_exc()
-        return False
+        # Re-raise the exception
+        raise e
 
 def send_otp_email(to_email, otp, name):
     """Send OTP via email using SendGrid HTTP API (more reliable than SMTP on Railway)"""

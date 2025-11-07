@@ -788,45 +788,41 @@ export default function UserDashboard() {
     }
   };
 
-  const handleSOSClick = async () => {
-    if (emergencyActive) return;
-    
-    // Check if location is available
-    if (!currentLocation?.latitude || !currentLocation?.longitude) {
-      alert('⚠️ Location not available!\n\nPlease wait for GPS signal before using SOS.');
+  const handleSOSEmergency = async () => {
+    console.log('🆘 SOS button pressed');
+    if (!currentLocation || !currentLocation.latitude) {
+      alert("Cannot send SOS: Your location is not available. Please ensure GPS is enabled and try again.");
+      console.error('SOS failed: currentLocation is not available.');
       return;
     }
-    
+
+    if (!window.confirm("Are you sure you want to send an SOS alert? This will notify emergency contacts and local authorities.")) {
+      return;
+    }
+
     setEmergencyActive(true);
-    
     try {
-      const response = await api.post('/incident/panic', {
+      console.log('🚀 Sending SOS alert to backend with location:', currentLocation);
+      const response = await api.post('/incident/create', {
+        incident_type: 'SOS',
+        description: 'SOS button pressed by user.',
         latitude: currentLocation.latitude,
         longitude: currentLocation.longitude,
-        address: currentLocation.address || 'Location detected',
-        description: '🚨 EMERGENCY SOS ACTIVATED by tourist'
       });
-      
-      console.log('✅ SOS sent successfully:', response.data);
-      
-      toast.success('🚨 EMERGENCY SOS ACTIVATED!\n\n✅ All authorities have been notified\n📍 Your location shared\n\nHelp is on the way!', {
-        autoClose: 8000,
-        position: 'top-center',
-        style: {
-          backgroundColor: '#ff4444',
-          color: 'white',
-          fontSize: '16px',
-          fontWeight: 'bold'
-        }
-      });
-      
-      // Keep emergency active for 5 minutes
-      setTimeout(() => setEmergencyActive(false), 300000);
+
+      if (response.data.success) {
+        alert('SOS alert sent successfully. Help is on the way.');
+        console.log('✅ SOS alert successfully processed by backend.');
+      } else {
+        // Handle backend-specific errors (e.g., SMS failed)
+        alert(`SOS alert failed: ${response.data.error || 'An unknown error occurred.'}`);
+        console.error('SOS failed:', response.data.error);
+      }
     } catch (error) {
-      console.error('❌ SOS Error:', error);
-      toast.error('Failed to send SOS. Please try again or call emergency services directly.', {
-        autoClose: 5000
-      });
+      console.error('❌ Critical error sending SOS alert:', error);
+      const errorMessage = error.response?.data?.error || 'A critical error occurred while sending the SOS alert. Please contact support.';
+      alert(errorMessage);
+    } finally {
       setEmergencyActive(false);
     }
   };
@@ -1077,7 +1073,7 @@ export default function UserDashboard() {
           <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
             <div className="text-center w-full flex flex-col items-center">
               <button
-                onClick={handleSOSClick}
+                onClick={handleSOSEmergency}
                 disabled={emergencyActive}
                 className={`w-64 h-64 rounded-full flex flex-col items-center justify-center text-white font-bold text-2xl shadow-2xl transition-all transform mx-auto ${
                   emergencyActive 
