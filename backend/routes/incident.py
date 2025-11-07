@@ -92,10 +92,15 @@ def trigger_panic():
 
             print(f"📱 Attempting to send SOS SMS to central emergency number: {emergency_number}")
             
+            # Create the location string safely to avoid nested f-string issues
+            lat = data.get("latitude")
+            lon = data.get("longitude")
+            location_str = incident.address or f"Lat: {lat}, Lon: {lon}"
+
             sms_message = (
                 f"🚨 VIKRANTA SOS ALERT\n"
                 f"User: {user.name} ({user.phone})\n"
-                    f"Location: {incident.address or f'Lat: {data.get("latitude")}, Lon: {data.get("longitude")}'}\n"
+                f"Location: {location_str}\n"
                 f"Time: {datetime.now().strftime('%I:%M %p')}"
             )
             
