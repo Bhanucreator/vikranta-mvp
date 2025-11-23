@@ -25,8 +25,8 @@ else:
     GEMINI_API_URL = None
     print(f"[STARTUP] Cultural blueprint loaded. Gemini API Key: ❌ MISSING - Cultural features will not work!")
 
-@cultural_bp.route('/nearby', methods=['POST'])
-@jwt_required(optional=True)  # Make JWT optional for debugging
+@cultural_bp.route('/events', methods=['GET'])
+@jwt_required(optional=True)
 def get_nearby_cultural_places():
     """
     Get nearby cultural places based on current location using Gemini AI
@@ -43,10 +43,10 @@ def get_nearby_cultural_places():
             print("[Cultural] No JWT token, using anonymous access")
             user_id = "anonymous"
         
-        data = request.get_json()
-        latitude = data.get('latitude')
-        longitude = data.get('longitude')
-        radius = data.get('radius', 5)  # Default 5km radius
+        data = request.args
+        latitude = data.get('latitude', type=float)
+        longitude = data.get('longitude', type=float)
+        radius = data.get('radius', 5, type=int)  # Default 5km radius
         language = data.get('language', 'en')  # Default English
         
         print(f"[Cultural] Location: {latitude}, {longitude}, Radius: {radius}km")
