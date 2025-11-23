@@ -488,62 +488,41 @@ export default function UserDashboard() {
       console.log('🤖 Calling Gemini AI with location:', currentLocation.latitude, currentLocation.longitude);
       
       // Fetch cultural places from Gemini AI based on current location
-      const response = await api.post('/cultural/nearby', {
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
-        radius: 10, // 10 km radius
-        language: language
+      const response = await api.get('/cultural/events', {
+        params: {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          radius: 10, // 10 km radius
+          language: language
+        }
       });
 
       console.log('✅ Gemini AI response:', response.data);
 
-      if (response.data.success && response.data.places && response.data.places.length > 0) {
-        console.log('📝 Processing', response.data.places.length, 'places from Gemini AI');
-        console.log('📍 First place sample:', JSON.stringify(response.data.places[0], null, 2));
-        
-        // Transform Gemini AI data to match our format
-        const transformedPlaces = response.data.places.map((place, index) => ({
-          id: index + 1,
-          name: place.name,
-          type: place.type || 'Cultural Site',
-          description: place.about || place.description,
-          distance: `${place.distance} km`,
-          safety: place.safety_level === 'safe' ? 'High Safety' : 
-                  place.safety_level === 'moderate' ? 'Medium Safety' : 'Caution',
-          rating: place.rating || 4.5,
-          icon: getPlaceIcon(place.type),
-          dressCode: place.dress_code || 'Modest clothing recommended',
-          openingHours: place.opening_hours || 'Check locally',
-          entryFee: place.entry_fee || 'Check at entrance',
-          bestTime: place.best_time || 'Morning hours',
-          safetyTips: place.safety_tips || 'Stay alert and keep belongings secure',
-          culturalInfo: place.about || place.description,
-          etiquette: place.etiquette || 'Respect local customs',
-          photography: place.photography || 'Allowed',
-          languages: place.languages_spoken ? place.languages_spoken.split(',').map(l => l.trim()) : ['Hindi', 'English'],
-          emergencyContact: place.emergency_contact || '100',
-          latitude: place.latitude,
-          longitude: place.longitude
+      if (response.data.success) {
+        const placesWithDistance = response.data.places.map(place => ({
+          ...place,
+          distance: calculateDistance(
+            currentLocation.latitude,
+            currentLocation.longitude,
+            place.latitude,
+            place.longitude
+          )
         }));
         
-        console.log('✅ Cultural places updated with', transformedPlaces.length, 'places');
-        console.log('📍 Transformed places:', transformedPlaces.map(p => ({ name: p.name, lat: p.latitude, lng: p.longitude })));
-        setNearbyPlaces(transformedPlaces);
-        placesCacheRef.current = transformedPlaces;
-        lastPlacesFetchRef.current = now;
+        // Sort by distance
+        placesWithDistance.sort((a, b) => a.distance - b.distance);
         
-        // Store in localStorage for offline mode
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('vikranta_places', JSON.stringify(transformedPlaces));
-        }
-      } else if (response.data.message || (response.data.places && response.data.places.length === 0)) {
-        // Rate limited - show message and keep loading state
-        console.log('⚠️ Gemini API rate limited. Waiting for quota reset...');
-        console.log('💡 Rate limit resets every minute. Please wait 30-60 seconds and the data will load automatically.');
-        // Don't set fallback data - let it retry when cache expires
+        setCulturalPlaces(placesWithDistance);
+        placesCacheRef.current = placesWithDistance; // Update cache
+        lastPlacesFetchRef.current = now; // Update timestamp
       } else {
-        console.warn('⚠️ Unexpected response format');
+        // Handle API errors gracefully
+        console.error('API Error fetching cultural places:', response.data.message, response.data.error_details);
+        // Optionally, set an error state to show a message to the user
+        setCulturalPlaces([]); // Clear places or show fallback
       }
+
     } catch (error) {
       console.error('❌ Error fetching cultural places from Gemini AI:', error);
       console.error('Error details:', error.response?.data || error.message);

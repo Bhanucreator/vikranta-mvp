@@ -134,17 +134,17 @@ Return ONLY the JSON array. No other text or markdown.
             }), 200
         
         if response.status_code != 200:
+            error_body = response.text
             print(f"[Cultural] ❌ Gemini API Error Response:")
             print(f"[Cultural] Status: {response.status_code}")
-            print(f"[Cultural] Body: {response.text[:500]}")  # First 500 chars
+            print(f"[Cultural] Full Body: {error_body}")  # Log the full body
             
-            # Handle rate limiting (429) or other errors by returning fallback data
-            print(f"[Cultural] ⚠️ API call failed. Using fallback data.")
+            # Return a 500 error so the frontend knows something went wrong
             return jsonify({
-                'success': True,
-                'places': get_fallback_cultural_places(),
-                'message': f'API Error {response.status_code}. Displaying sample data.'
-            }), 200
+                'success': False,
+                'message': f'Failed to retrieve data from Gemini API. Status: {response.status_code}',
+                'error_details': error_body 
+            }), 500
         
         result = response.json()
         print(f"[Cultural] 📦 Response keys: {list(result.keys())}")

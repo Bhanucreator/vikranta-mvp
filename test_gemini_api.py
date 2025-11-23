@@ -9,7 +9,7 @@ import requests
 import json
 
 # Set your API key
-GEMINI_API_KEY = "AIzaSyBCSzQmAxHiBWGLS1_zVA0wI5TqtQI_faY"  # Replace with your actual key
+GEMINI_API_KEY = "AIzaSyA5y7UBk7Nj3DJeFEy8ojLqJIcrZuptJY4"  # Replace with your actual key
 
 if not GEMINI_API_KEY:
     print("❌ GEMINI_API_KEY not set!")
@@ -18,8 +18,8 @@ if not GEMINI_API_KEY:
 print(f"✅ API Key length: {len(GEMINI_API_KEY)}")
 print(f"✅ API Key starts with: {GEMINI_API_KEY[:10]}...")
 
-# Test URL construction
-GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={GEMINI_API_KEY}'
+# Test URL construction  
+GEMINI_API_URL = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={GEMINI_API_KEY}'
 print(f"\n🔗 API URL: {GEMINI_API_URL[:100]}...")
 
 # Test API call
