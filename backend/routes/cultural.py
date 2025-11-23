@@ -11,7 +11,7 @@ cultural_bp = Blueprint('cultural', __name__)
 # Cache for Gemini API responses (in-memory cache)
 _cultural_cache = {}
 _events_cache = {}
-CACHE_DURATION_MINUTES = 5
+CACHE_DURATION_MINUTES = 60
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
@@ -82,35 +82,19 @@ def get_nearby_cultural_places():
                 'message': 'Displaying sample data. API key not configured.'
             }), 200
         
-        # Create prompt for Gemini AI
-        prompt = f"""You are a tourist guide API. Return ONLY valid JSON, no markdown, no explanation.
-
-Based on GPS coordinates {latitude}, {longitude}, return exactly 4 cultural/tourist places within {radius}km.
-
-Return this EXACT JSON structure (ensure all strings are properly escaped):
+        # Create a more concise prompt for Gemini AI to reduce token usage
+        prompt = f"""As a guide API, return a JSON array of 4 cultural places near {latitude},{longitude} within {radius}km.
+JSON structure must be:
 [
   {{
-    "name": "Place Name",
-    "type": "temple/fort/palace/museum",
-    "distance": 2.5,
-    "rating": 4.5,
-    "about": "Brief description in one line",
-    "opening_hours": "9 AM - 5 PM",
-    "entry_fee": "Rs 100 or Free",
-    "best_time": "Morning",
-    "dress_code": "Modest clothing",
-    "photography": "Allowed",
-    "etiquette": "Remove shoes",
-    "safety_level": "safe",
-    "safety_tips": "Watch belongings",
-    "languages_spoken": "English, Local",
-    "emergency_contact": "Police 100",
-    "latitude": 12.9716,
-    "longitude": 77.5946
+    "name": "Place Name", "type": "historic|museum|etc", "distance": 2.5, "rating": 4.5, "about": "Brief description",
+    "opening_hours": "10 AM - 5 PM", "entry_fee": "₹100", "best_time": "Morning", "dress_code": "Casual",
+    "photography": "Allowed", "etiquette": "Be respectful", "safety_level": "safe", "safety_tips": "Stay alert",
+    "languages_spoken": "English, Local", "emergency_contact": "100", "latitude": 12.9716, "longitude": 77.5946
   }}
 ]
-
-IMPORTANT: Return ONLY the JSON array, no other text."""
+Return ONLY the JSON array. No other text or markdown.
+"""
         
         # Call Gemini AI API
         headers = {'Content-Type': 'application/json'}
