@@ -513,14 +513,14 @@ export default function UserDashboard() {
         // Sort by distance
         placesWithDistance.sort((a, b) => a.distance - b.distance);
         
-        setCulturalPlaces(placesWithDistance);
+        setNearbyPlaces(placesWithDistance);
         placesCacheRef.current = placesWithDistance; // Update cache
         lastPlacesFetchRef.current = now; // Update timestamp
       } else {
         // Handle API errors gracefully
         console.error('API Error fetching cultural places:', response.data.message, response.data.error_details);
         // Optionally, set an error state to show a message to the user
-        setCulturalPlaces([]); // Clear places or show fallback
+        setNearbyPlaces([]); // Clear places or show fallback
       }
 
     } catch (error) {
