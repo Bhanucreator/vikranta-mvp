@@ -4,6 +4,7 @@ import os
 import requests
 import json
 from datetime import datetime, timedelta
+from utils.fallback_data import get_fallback_cultural_places
 
 cultural_bp = Blueprint('cultural', __name__)
 
@@ -74,12 +75,12 @@ def get_nearby_cultural_places():
                 del _cultural_cache[cache_key]
         
         if not GEMINI_API_KEY or not GEMINI_API_URL:
-            print("[Cultural] ERROR: GEMINI_API_KEY not configured")
+            print("[Cultural] ⚠️ WARNING: GEMINI_API_KEY not configured. Using fallback data.")
             return jsonify({
-                'success': False,
-                'error': 'Gemini API key not configured. Please set GEMINI_API_KEY environment variable in Railway.',
-                'places': []
-            }), 503  # Service Unavailable
+                'success': True,
+                'places': get_fallback_cultural_places(),
+                'message': 'Displaying sample data. API key not configured.'
+            }), 200
         
         # Create prompt for Gemini AI
         prompt = f"""You are a tourist guide API. Return ONLY valid JSON, no markdown, no explanation.
@@ -134,40 +135,32 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
             response = requests.post(GEMINI_API_URL, headers=headers, json=payload, timeout=30)
             print(f"[Cultural] ✅ Gemini API responded with status: {response.status_code}")
         except requests.exceptions.Timeout:
-            print(f"[Cultural] ❌ Gemini API timeout after 30 seconds")
+            print(f"[Cultural] ❌ Gemini API timeout after 30 seconds. Using fallback data.")
             return jsonify({
-                'success': False,
-                'error': 'Gemini API timeout - service is slow to respond',
-                'places': []
-            }), 504
+                'success': True,
+                'places': get_fallback_cultural_places(),
+                'message': 'API timeout. Displaying sample data.'
+            }), 200
         except Exception as e:
-            print(f"[Cultural] ❌ Gemini API connection error: {e}")
+            print(f"[Cultural] ❌ Gemini API connection error: {e}. Using fallback data.")
             return jsonify({
-                'success': False,
-                'error': f'Failed to connect to Gemini API: {str(e)}',
-                'places': []
-            }), 500
+                'success': True,
+                'places': get_fallback_cultural_places(),
+                'message': f'API connection error. Displaying sample data.'
+            }), 200
         
         if response.status_code != 200:
             print(f"[Cultural] ❌ Gemini API Error Response:")
             print(f"[Cultural] Status: {response.status_code}")
             print(f"[Cultural] Body: {response.text[:500]}")  # First 500 chars
             
-            # Handle rate limiting (429) - return empty array instead of error
-            if response.status_code == 429:
-                print(f"[Cultural] ⚠️ Rate limit exceeded - returning empty results")
-                return jsonify({
-                    'success': True,  # Don't treat as error
-                    'places': [],
-                    'message': 'Rate limit exceeded, please wait a moment and try again'
-                }), 200  # Return 200 to avoid frontend error
-            
+            # Handle rate limiting (429) or other errors by returning fallback data
+            print(f"[Cultural] ⚠️ API call failed. Using fallback data.")
             return jsonify({
-                'success': False,
-                'error': f'Gemini API returned {response.status_code}',
-                'details': response.text[:200],
-                'places': []
-            }), 500
+                'success': True,
+                'places': get_fallback_cultural_places(),
+                'message': f'API Error {response.status_code}. Displaying sample data.'
+            }), 200
         
         result = response.json()
         print(f"[Cultural] 📦 Response keys: {list(result.keys())}")
@@ -203,9 +196,13 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
                 _cultural_cache[cache_key] = (places_data, datetime.now())
                 print(f"[Cultural] ✅ Cached places for {cache_key}")
             except json.JSONDecodeError as e:
-                print(f"[Cultural] ❌ JSON Parse Error: {e}")
+                print(f"[Cultural] ❌ JSON Parse Error: {e}. Using fallback data.")
                 print(f"[Cultural] 📄 Response text (first 500 chars): {text_response[:500]}")
-                return jsonify({'error': 'Failed to parse AI response - invalid JSON'}), 500
+                return jsonify({
+                    'success': True,
+                    'places': get_fallback_cultural_places(),
+                    'message': 'Failed to parse AI response. Displaying sample data.'
+                }), 200
             
             return jsonify({
                 'success': True,
@@ -216,17 +213,29 @@ IMPORTANT: Return ONLY the JSON array, no other text."""
                 }
             }), 200
         else:
-            print(f"[Cultural] ❌ No candidates in response")
-            return jsonify({'error': 'No response from Gemini AI'}), 500
+            print(f"[Cultural] ❌ No candidates in response. Using fallback data.")
+            return jsonify({
+                'success': True,
+                'places': get_fallback_cultural_places(),
+                'message': 'No response from AI. Displaying sample data.'
+            }), 200
             
     except json.JSONDecodeError as e:
-        print(f"[Cultural] ❌ Outer JSON Parse Error: {e}")
-        return jsonify({'error': 'Failed to parse AI response'}), 500
+        print(f"[Cultural] ❌ Outer JSON Parse Error: {e}. Using fallback data.")
+        return jsonify({
+            'success': True,
+            'places': get_fallback_cultural_places(),
+            'message': 'Failed to parse AI response. Displaying sample data.'
+        }), 200
     except Exception as e:
-        print(f"[Cultural] ❌ Error fetching cultural places: {str(e)}")
+        print(f"[Cultural] ❌ Error fetching cultural places: {str(e)}. Using fallback data.")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'success': True,
+            'places': get_fallback_cultural_places(),
+            'message': f'An error occurred: {str(e)}. Displaying sample data.'
+        }), 200
 
 
 @cultural_bp.route('/events', methods=['GET'])
@@ -261,7 +270,7 @@ def get_cultural_events():
                 del _events_cache[cache_key]
         
         if not GEMINI_API_KEY:
-            print("[Cultural Events] ERROR: GEMINI_API_KEY not configured")
+            print("[Cultural Events] ⚠️ WARNING: GEMINI_API_KEY not configured. Using fallback event.")
             # Return fallback event
             return jsonify({
                 'success': True,
@@ -311,7 +320,7 @@ Return ONLY the JSON object, no other text."""
         response = requests.post(GEMINI_API_URL, headers=headers, json=payload, timeout=10)
         
         if response.status_code != 200:
-            print(f"[Cultural Events] ❌ Gemini API Error: {response.text}")
+            print(f"[Cultural Events] ❌ Gemini API Error: {response.text}. Using fallback event.")
             # Return fallback
             return jsonify({
                 'success': True,
@@ -351,9 +360,10 @@ Return ONLY the JSON object, no other text."""
                         'event': event_data
                     }), 200
                 except json.JSONDecodeError as e:
-                    print(f"[Cultural Events] ❌ JSON Parse Error: {e}")
+                    print(f"[Cultural Events] ❌ JSON Parse Error: {e}. Using fallback event.")
         
-        # Fallback if parsing fails
+        # Fallback if parsing fails or no candidates
+        print("[Cultural Events] ⚠️ Using fallback event data.")
         return jsonify({
             'success': True,
             'event': {
@@ -363,7 +373,7 @@ Return ONLY the JSON object, no other text."""
         }), 200
         
     except Exception as e:
-        print(f"[Cultural Events] Error: {str(e)}")
+        print(f"[Cultural Events] ❌ Error: {str(e)}. Using fallback event.")
         return jsonify({
             'success': True,
             'event': {
