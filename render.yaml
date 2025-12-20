@@ -2,7 +2,7 @@
 
 services:
   # 1. PostgreSQL Database
-  - type: postgres
+  - type: psql
     name: vikranta-db
     plan: free
     postgresMajorVersion: 14
@@ -17,7 +17,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromService:
-          type: postgres
+          type: psql
           name: vikranta-db
           property: connectionString
       - key: SECRET_KEY
