@@ -1,0 +1,51 @@
+# render.yaml
+
+services:
+  # 1. PostgreSQL Database
+  - type: psql
+    name: vikranta-db
+    plan: free
+    psqlVersion: 14
+
+  # 2. Flask Backend
+  - type: web
+    name: vikranta-backend
+    plan: free
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: psql
+          name: vikranta-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true # Render will generate a secure secret key
+      - key: PYTHON_VERSION
+        value: "3.10.9"
+      # IMPORTANT: Add your API keys as secret environment variables in the Render dashboard
+      # - key: GEMINI_API_KEY
+      # - key: WEATHER_API_KEY
+      # - key: TWILIO_ACCOUNT_SID
+      # - key: TWILIO_AUTH_TOKEN
+      # - key: TWILIO_PHONE_NUMBER
+      # - key: SMS_ENABLED
+
+  # 3. React Frontend
+  - type: static
+    name: vikranta-frontend
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    # Add a rewrite rule to handle client-side routing
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: vikranta-backend
+          property: url
