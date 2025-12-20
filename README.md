@@ -162,12 +162,13 @@ Contributions are welcome! Please feel free to submit a pull request.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### Deployment on Railway
+### Deployment on render
 
-The project is configured for automatic deployment on Railway from the `main` GitHub branch. The key settings for the backend service on Railway are:
+The project is configured for automatic deployment on render from the `main` GitHub branch. The key settings for the backend service on render are:
 
 *   **Build Method:** Dockerfile
 *   **Dockerfile Path:** `./backend/Dockerfile`
 *   **Start Command:** (Handled by the Dockerfile's `CMD` instruction)
 
 This setup ensures that any push to the `main` branch will trigger a new build and deployment of the backend service.
+link:https://vikranta-frontend.onrender.com
