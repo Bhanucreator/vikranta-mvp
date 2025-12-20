@@ -1,13 +1,14 @@
 # render.yaml
 
-services:
-  # 1. PostgreSQL Database
-  - type: psql
-    name: vikranta-db
+# 1. Define the database as a top-level item
+databases:
+  - name: vikranta-db
     plan: free
     postgresMajorVersion: 14
 
-  # 2. Flask Backend
+# 2. Define the web services that use the database
+services:
+  # Flask Backend Service
   - type: web
     name: vikranta-backend
     plan: free
@@ -16,12 +17,11 @@ services:
     dockerContext: .
     envVars:
       - key: DATABASE_URL
-        fromService:
-          type: psql
+        fromDatabase: # Correct way to reference the database
           name: vikranta-db
           property: connectionString
       - key: SECRET_KEY
-        generateValue: true # Render will generate a secure secret key
+        generateValue: true
       - key: PYTHON_VERSION
         value: "3.10.9"
       # IMPORTANT: Add your API keys as secret environment variables in the Render dashboard
@@ -32,13 +32,12 @@ services:
       # - key: TWILIO_PHONE_NUMBER
       # - key: SMS_ENABLED
 
-  # 3. React Frontend
+  # React Frontend Service
   - type: static
     name: vikranta-frontend
     plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: ./frontend/dist
-    # Add a rewrite rule to handle client-side routing
     routes:
       - type: rewrite
         source: /*
