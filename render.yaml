@@ -1,12 +1,12 @@
 # render.yaml
 
-# 1. Define the database as a top-level item
+# 1. Define the database
 databases:
   - name: vikranta-db
     plan: free
     postgresMajorVersion: 14
 
-# 2. Define the web services that use the database
+# 2. Define the services
 services:
   # Flask Backend Service
   - type: web
@@ -17,20 +17,15 @@ services:
     dockerContext: .
     envVars:
       - key: DATABASE_URL
-        fromDatabase: # Correct way to reference the database
+        fromDatabase:
           name: vikranta-db
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: PYTHON_VERSION
         value: "3.10.9"
-      # IMPORTANT: Add your API keys as secret environment variables in the Render dashboard
-      # - key: GEMINI_API_KEY
-      # - key: WEATHER_API_KEY
-      # - key: TWILIO_ACCOUNT_SID
-      # - key: TWILIO_AUTH_TOKEN
-      # - key: TWILIO_PHONE_NUMBER
-      # - key: SMS_ENABLED
+      # IMPORTANT: Add your secret API keys in the Render dashboard
+      # under the Environment tab for this service.
 
   # React Frontend Service
   - type: static
@@ -38,13 +33,15 @@ services:
     plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: ./frontend/dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    # Set environment variables for the build process
     envVars:
       - key: VITE_API_BASE_URL
         fromService:
           type: web
           name: vikranta-backend
           property: url
+    # Add a rewrite rule to handle client-side routing (for React Router)
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
