@@ -33,13 +33,6 @@ services:
     plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: ./frontend/dist
-    # Set environment variables for the build process
-    envVars:
-      - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: vikranta-backend
-          property: url
     # Add a rewrite rule to handle client-side routing (for React Router)
     routes:
       - type: rewrite
