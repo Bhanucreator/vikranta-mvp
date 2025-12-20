@@ -162,13 +162,35 @@ Contributions are welcome! Please feel free to submit a pull request.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### Deployment on render
+### Deployment on Railway
 
-The project is configured for automatic deployment on render from the `main` GitHub branch. The key settings for the backend service on render are:
+The project is configured for automatic deployment on Railway from the `main` GitHub branch. The key settings for the backend service on Railway are:
 
 *   **Build Method:** Dockerfile
 *   **Dockerfile Path:** `./backend/Dockerfile`
 *   **Start Command:** (Handled by the Dockerfile's `CMD` instruction)
 
 This setup ensures that any push to the `main` branch will trigger a new build and deployment of the backend service.
-link:https://vikranta-frontend.onrender.com
+
+### 🌐 Deployment Update
+Initially, this project was deployed on **Railway**. However, due to the expiration of the free tier trial/credits, we have successfully migrated the application to **Render** to ensure 24/7 availability.
+
+**New Deployment Link:** [https://thorough-reflection-production-1bb6.up.railway.app/](https://vikranta-frontend.onrender.com)
+
+---
+
+### 📋 Migration Summary
+* **Original Host:** Railway (Free Tier Expired)
+* **Current Host:** Render (Active)
+* **Status:** ![Live](https://img.shields.io/badge/Status-Live-success)
+
+> [!NOTE]
+> **Cold Start:** Since we are now using Render's free tier, the application may take about 30–60 seconds to "wake up" during the initial load if the site has been inactive. We appreciate your patience!
+
+---
+
+### 🛠 Local Setup
+If you prefer to run the project locally:
+1. `git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git`
+2. `npm install`
+3. `npm start`
