@@ -2,10 +2,10 @@
 
 services:
   # 1. PostgreSQL Database
-  - type: psql
+  - type: postgres
     name: vikranta-db
     plan: free
-    psqlVersion: 14
+    postgresMajorVersion: 14
 
   # 2. Flask Backend
   - type: web
