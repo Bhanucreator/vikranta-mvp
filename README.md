@@ -175,7 +175,7 @@ This setup ensures that any push to the `main` branch will trigger a new build a
 ### 🌐 Deployment Update
 Initially, this project was deployed on **Railway**. However, due to the expiration of the free tier trial/credits, we have successfully migrated the application to **Render** to ensure 24/7 availability.
 
-**New Deployment Link:** [https://thorough-reflection-production-1bb6.up.railway.app/](https://vikranta-frontend.onrender.com)
+**New Deployment Link:** [https://vikranta-frontend.onrender.com](https://vikranta-frontend.onrender.com)
 
 ---
 
