@@ -255,6 +255,8 @@ def send_otp_email(to_email, otp, name):
         )
         
         print(f"\n📡 Sending email via SendGrid HTTP API (port 443 - HTTPS)...")
+        print(f"📧 FROM: {sender_email}")
+        print(f"📧 TO: {to_email}")
         
         # Send email via SendGrid API (uses HTTPS port 443 instead of SMTP 587)
         sg = SendGridAPIClient(api_key)
@@ -265,10 +267,20 @@ def send_otp_email(to_email, otp, name):
         
         logger.info(f"✅ OTP email sent to {to_email} via SendGrid")
         return True
-            
+    
     except Exception as e:
-        logger.error(f"❌ Failed to send OTP email via SendGrid: {str(e)}")
-        print(f"❌ Error sending email via SendGrid: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"❌ Failed to send OTP email via SendGrid: {error_msg}")
+        print(f"❌ Error sending email via SendGrid: {error_msg}")
+        
+        # Try to get more details from the exception
+        if hasattr(e, 'body'):
+            print(f"❌ SendGrid Error Body: {e.body}")
+        if hasattr(e, 'reason'):
+            print(f"❌ SendGrid Error Reason: {e.reason}")
+        if hasattr(e, 'headers'):
+            print(f"❌ SendGrid Error Headers: {e.headers}")
+            
         import traceback
         traceback.print_exc()
         return False
