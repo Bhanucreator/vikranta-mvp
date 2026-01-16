@@ -281,13 +281,18 @@ def initialize_sample_data():
         print("   Email: admin@vikranta.gov.in")
         print("   Password: Admin@2025")
 
+# Create app and socketio at module level so Gunicorn can import them
+# Gunicorn will look for 'app' when you run: gunicorn app:app
+app, socketio = create_app()
+
+print("\n" + "="*60)
+print("🚀 VIKRANTA Backend Starting...")
+print(f"📡 Real-time WebSocket support: {'ENABLED' if socketio else 'DISABLED'}")
+print(f"✅ SocketIO instance: {type(socketio)}")
+print("👮 Authority alerts: ACTIVE")
+print("💬 Incident chat system: READY")
+print("="*60 + "\n")
+
 if __name__ == '__main__':
-    app, socketio = create_app()  # Unpack both app and socketio
-    print("\n" + "="*60)
-    print("🚀 VIKRANTA Backend Starting...")
-    print(f"📡 Real-time WebSocket support: {'ENABLED' if socketio else 'DISABLED'}")
-    print(f"✅ SocketIO instance: {type(socketio)}")
-    print("👮 Authority alerts: ACTIVE")
-    print("💬 Incident chat system: READY")
-    print("="*60 + "\n")
+    # Only use the development server when running directly (python app.py)
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
