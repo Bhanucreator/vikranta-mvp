@@ -196,11 +196,8 @@ def send_sms(phone_number, message):
         raise e
 
 def send_otp_email(to_email, otp, name):
-    """Send OTP via email - tries Gmail SMTP first, then SendGrid as fallback"""
+    """Send OTP via email - tries Resend first, then SendGrid as fallback"""
     import os
-    import smtplib
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
     
     # Email HTML content
     html_content = f"""
@@ -232,39 +229,33 @@ def send_otp_email(to_email, otp, name):
     </html>
     """
     
-    plain_text = f"Hi {name},\n\nYour VIKRANTA verification code is: {otp}\n\nThis code is valid for 10 minutes.\n\nTeam VIKRANTA"
+    # Try Resend first (most reliable, no trial restrictions)
+    resend_api_key = os.environ.get('RESEND_API_KEY')
     
-    # Try Gmail SMTP first (more reliable)
-    gmail_user = os.environ.get('GMAIL_USER')
-    gmail_app_password = os.environ.get('GMAIL_APP_PASSWORD')
-    
-    if gmail_user and gmail_app_password:
+    if resend_api_key:
         try:
-            print(f"\n📧 Trying Gmail SMTP...")
-            print(f"   From: {gmail_user}")
+            import resend
+            print(f"\n📧 Trying Resend API...")
             print(f"   To: {to_email}")
             
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = 'VIKRANTA - Your Verification Code'
-            msg['From'] = f'VIKRANTA Safety <{gmail_user}>'
-            msg['To'] = to_email
+            resend.api_key = resend_api_key
             
-            msg.attach(MIMEText(plain_text, 'plain'))
-            msg.attach(MIMEText(html_content, 'html'))
+            params = {
+                "from": "VIKRANTA <onboarding@resend.dev>",
+                "to": [to_email],
+                "subject": "VIKRANTA - Your Verification Code",
+                "html": html_content
+            }
             
-            server = smtplib.SMTP('smtp.gmail.com', 587, timeout=30)
-            server.starttls()
-            server.login(gmail_user, gmail_app_password)
-            server.send_message(msg)
-            server.quit()
-            
-            print(f"✅ Email sent successfully via Gmail to {to_email}")
-            logger.info(f"✅ OTP email sent to {to_email} via Gmail")
+            response = resend.Emails.send(params)
+            print(f"✅ Resend Response: {response}")
+            print(f"✅ Email sent successfully via Resend to {to_email}")
+            logger.info(f"✅ OTP email sent to {to_email} via Resend")
             return True
             
         except Exception as e:
-            print(f"❌ Gmail SMTP failed: {str(e)}")
-            logger.error(f"Gmail SMTP failed: {str(e)}")
+            print(f"❌ Resend failed: {str(e)}")
+            logger.error(f"Resend failed: {str(e)}")
     
     # Fallback to SendGrid
     try:
