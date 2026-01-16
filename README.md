@@ -63,7 +63,7 @@ The project features a decoupled architecture with a **React** frontend and a **
 
 ### Infrastructure & Deployment
 *   **Containerization:** Docker & Docker Compose
-*   **Deployment:** Railway.app (or any platform supporting Docker)
+*   **Deployment:** Render (or any platform supporting Docker)
 
 ---
 
