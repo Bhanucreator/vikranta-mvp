@@ -139,6 +139,15 @@ Return ONLY the JSON array. No other text or markdown.
             print(f"[Cultural] Status: {response.status_code}")
             print(f"[Cultural] Full Body: {error_body}")  # Log the full body
             
+            # Handle rate limiting (429) - return fallback data
+            if response.status_code == 429:
+                print(f"[Cultural] ⚠️ Rate limit exceeded - returning fallback data")
+                return jsonify({
+                    'success': True,
+                    'places': get_fallback_cultural_places(),
+                    'message': 'Rate limit exceeded. Displaying sample data.'
+                }), 200
+            
             # Return a 500 error so the frontend knows something went wrong
             return jsonify({
                 'success': False,

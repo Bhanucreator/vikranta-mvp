@@ -135,7 +135,7 @@ Return ONLY the JSON array, no markdown, no explanation."""
         }
         
         print(f"[Geofence] 🚀 Calling Gemini API...")
-        print(f"[Geofence] Model: gemini-1.5-flash")
+        print(f"[Geofence] Model: gemini-2.0-flash")
         
         try:
             response = requests.post(GEMINI_API_URL, headers=headers, json=payload, timeout=30)
