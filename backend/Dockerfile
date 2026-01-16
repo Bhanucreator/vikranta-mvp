@@ -20,5 +20,5 @@ COPY . .
 EXPOSE 5000
 
 # Run the application with Gunicorn (production server)
-# Using eventlet for WebSocket support with Flask-SocketIO
-CMD ["gunicorn", "--worker-class", "eventlet", "-w", "1", "--bind", "0.0.0.0:5000", "app:app"]
+# Using gevent for WebSocket support with Flask-SocketIO
+CMD ["gunicorn", "--worker-class", "gevent", "-w", "1", "--bind", "0.0.0.0:5000", "--timeout", "120", "app:app"]

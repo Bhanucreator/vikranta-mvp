@@ -37,10 +37,11 @@ def create_app(config_name=None):
     
     # Initialize SocketIO for real-time communication
     # IMPORTANT: Assign to global variable so it can be imported by routes
+    # Use gevent async mode for production (Gunicorn with gevent worker)
     socketio = SocketIO(
         app, 
         cors_allowed_origins="*", 
-        async_mode='threading',
+        async_mode='gevent',
         logger=True,  # Enable logging for debugging
         engineio_logger=False,  # Disable verbose engine.io logs
         ping_timeout=60,  # Increase timeout for slower connections
