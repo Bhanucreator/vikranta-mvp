@@ -196,57 +196,93 @@ def send_sms(phone_number, message):
         raise e
 
 def send_otp_email(to_email, otp, name):
-    """Send OTP via email using SendGrid HTTP API (more reliable than SMTP on Railway)"""
+    """Send OTP via email - tries Gmail SMTP first, then SendGrid as fallback"""
+    import os
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    
+    # Email HTML content
+    html_content = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <h2 style="color: #2563eb; margin-bottom: 20px;">Welcome to Vikranta</h2>
+                <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
+                    Hi {name},
+                </p>
+                <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
+                    Your verification code is:
+                </p>
+                <div style="background-color: #f0f9ff; padding: 20px; border-radius: 5px; text-align: center; margin-bottom: 20px;">
+                    <h1 style="color: #1e40af; margin: 0; font-size: 36px; letter-spacing: 5px;">{otp}</h1>
+                </div>
+                <p style="font-size: 14px; color: #666;">
+                    This OTP is valid for 10 minutes. Do not share it with anyone.
+                </p>
+                <p style="font-size: 14px; color: #666; margin-top: 20px;">
+                    If you didn't request this code, please ignore this email.
+                </p>
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+                <p style="font-size: 12px; color: #999;">
+                    Team VIKRANTA - Smart Tourist Safety Platform
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+    
+    plain_text = f"Hi {name},\n\nYour VIKRANTA verification code is: {otp}\n\nThis code is valid for 10 minutes.\n\nTeam VIKRANTA"
+    
+    # Try Gmail SMTP first (more reliable)
+    gmail_user = os.environ.get('GMAIL_USER')
+    gmail_app_password = os.environ.get('GMAIL_APP_PASSWORD')
+    
+    if gmail_user and gmail_app_password:
+        try:
+            print(f"\n📧 Trying Gmail SMTP...")
+            print(f"   From: {gmail_user}")
+            print(f"   To: {to_email}")
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = 'VIKRANTA - Your Verification Code'
+            msg['From'] = f'VIKRANTA Safety <{gmail_user}>'
+            msg['To'] = to_email
+            
+            msg.attach(MIMEText(plain_text, 'plain'))
+            msg.attach(MIMEText(html_content, 'html'))
+            
+            server = smtplib.SMTP('smtp.gmail.com', 587, timeout=30)
+            server.starttls()
+            server.login(gmail_user, gmail_app_password)
+            server.send_message(msg)
+            server.quit()
+            
+            print(f"✅ Email sent successfully via Gmail to {to_email}")
+            logger.info(f"✅ OTP email sent to {to_email} via Gmail")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Gmail SMTP failed: {str(e)}")
+            logger.error(f"Gmail SMTP failed: {str(e)}")
+    
+    # Fallback to SendGrid
     try:
-        import os
         from sendgrid import SendGridAPIClient
         from sendgrid.helpers.mail import Mail, Email, To, Content
         
-        print(f"\n📧 SendGrid Email Configuration:")
+        print(f"\n📧 Trying SendGrid API...")
         
-        # Get SendGrid API key (check both env var names)
-        api_key = os.environ.get('SENDGRID_API_KEY') or os.environ.get('SMTP_PASSWORD')
-        sender_email = os.environ.get('SENDGRID_FROM_EMAIL', 'kiranbhanu671@gmail.com')
+        api_key = os.environ.get('SENDGRID_API_KEY')
+        sender_email = os.environ.get('MAIL_FROM_EMAIL', 'bhanukiran90216@gmail.com')
         
-        print(f"   API Key: {'*' * 20}...{api_key[-4:] if api_key else 'Not Set'}")
+        print(f"   API Key: {'Set' if api_key else 'Not Set'}")
         print(f"   From: {sender_email}")
         print(f"   To: {to_email}")
-        print(f"   OTP: {otp}")
         
         if not api_key:
-            raise ValueError("Missing SendGrid API key. Set SENDGRID_API_KEY or SMTP_PASSWORD environment variable")
+            raise ValueError("No SENDGRID_API_KEY configured")
         
-        # Email HTML content
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
-                <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                    <h2 style="color: #2563eb; margin-bottom: 20px;">Welcome to Vikranta</h2>
-                    <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
-                        Hi {name},
-                    </p>
-                    <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
-                        Your verification code is:
-                    </p>
-                    <div style="background-color: #f0f9ff; padding: 20px; border-radius: 5px; text-align: center; margin-bottom: 20px;">
-                        <h1 style="color: #1e40af; margin: 0; font-size: 36px; letter-spacing: 5px;">{otp}</h1>
-                    </div>
-                    <p style="font-size: 14px; color: #666;">
-                        This OTP is valid for 10 minutes. Do not share it with anyone.
-                    </p>
-                    <p style="font-size: 14px; color: #666; margin-top: 20px;">
-                        If you didn't request this code, please ignore this email.
-                    </p>
-                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-                    <p style="font-size: 12px; color: #999;">
-                        Team VIKRANTA - Smart Tourist Safety Platform
-                    </p>
-                </div>
-            </body>
-        </html>
-        """
-        
-        # Create SendGrid message
         message = Mail(
             from_email=Email(sender_email, 'VIKRANTA Safety'),
             to_emails=To(to_email),
@@ -254,11 +290,6 @@ def send_otp_email(to_email, otp, name):
             html_content=Content("text/html", html_content)
         )
         
-        print(f"\n📡 Sending email via SendGrid HTTP API (port 443 - HTTPS)...")
-        print(f"📧 FROM: {sender_email}")
-        print(f"📧 TO: {to_email}")
-        
-        # Send email via SendGrid API (uses HTTPS port 443 instead of SMTP 587)
         sg = SendGridAPIClient(api_key)
         response = sg.send(message)
         
@@ -270,17 +301,8 @@ def send_otp_email(to_email, otp, name):
     
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"❌ Failed to send OTP email via SendGrid: {error_msg}")
-        print(f"❌ Error sending email via SendGrid: {error_msg}")
-        
-        # Try to get more details from the exception
-        if hasattr(e, 'body'):
-            print(f"❌ SendGrid Error Body: {e.body}")
-        if hasattr(e, 'reason'):
-            print(f"❌ SendGrid Error Reason: {e.reason}")
-        if hasattr(e, 'headers'):
-            print(f"❌ SendGrid Error Headers: {e.headers}")
-            
+        logger.error(f"❌ Failed to send OTP email: {error_msg}")
+        print(f"❌ Error sending email: {error_msg}")
         import traceback
         traceback.print_exc()
         return False
